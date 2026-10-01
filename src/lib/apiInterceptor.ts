@@ -278,7 +278,93 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     return jsonResponse(standaloneDB.getAttendance());
   }
 
-  // 6. NOTIFICATIONS
+  if (path.includes('/api/live-classes')) {
+    if (method === 'POST') {
+      const created = standaloneDB.saveLiveClass(body);
+      return jsonResponse(created);
+    }
+    return jsonResponse(standaloneDB.getLiveClasses());
+  }
+
+  // 6. RESOURCES & COURSE UNITS
+  if (path.includes('/api/resources')) {
+    if (method === 'POST') {
+      const created = standaloneDB.saveResource(body);
+      return jsonResponse(created);
+    }
+    const matchCourse = path.match(/\/api\/resources\/(\d+)/);
+    const courseId = matchCourse ? Number(matchCourse[1]) : undefined;
+    return jsonResponse(standaloneDB.getResources(courseId));
+  }
+
+  if (path.includes('/api/course-units')) {
+    return jsonResponse([
+      { unit_id: 1, course_id: 1, unit_name: 'Unit 1: Relational Model & SQL' },
+      { unit_id: 2, course_id: 1, unit_name: 'Unit 2: Normalization (1NF-BCNF)' },
+      { unit_id: 3, course_id: 1, unit_name: 'Unit 3: Transactions & Concurrency' },
+    ]);
+  }
+
+  // 7. DISCUSSIONS & FORUMS
+  if (path.includes('/api/discussions')) {
+    if (path.includes('/replies')) {
+      if (method === 'POST') {
+        return jsonResponse({
+          reply_id: Date.now(),
+          content: body.content,
+          created_at: new Date().toISOString(),
+          user_name: 'You',
+        });
+      }
+      return jsonResponse([
+        {
+          reply_id: 1,
+          content: 'In PostgreSQL, B-Trees support <, <=, =, >=, and > queries because values are kept sorted across leaf nodes.',
+          created_at: '2026-09-27T17:15:00Z',
+          user_name: 'Dr. K. Srinivas Rao',
+          user_role: 'faculty',
+        },
+      ]);
+    }
+    if (method === 'POST') {
+      const created = standaloneDB.saveDiscussion(body);
+      return jsonResponse(created);
+    }
+    return jsonResponse(standaloneDB.getDiscussions());
+  }
+
+  // 8. STUDY GROUPS
+  if (path.includes('/api/groups')) {
+    if (path.includes('/members')) {
+      return jsonResponse([
+        { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
+        { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
+        { user_id: 6, full_name: 'Rahul Varma', role: 'Member' },
+      ]);
+    }
+    if (path.includes('/contributions')) {
+      return jsonResponse([
+        { contribution_id: 1, user_id: 1, user_name: 'Shloka Reddy', type: 'task', description: 'Drafted ER diagram for hospital scenario', points: 3, created_at: '2026-09-29T10:00:00Z' },
+      ]);
+    }
+    if (method === 'POST') {
+      const created = standaloneDB.saveGroup(body);
+      return jsonResponse(created);
+    }
+    return jsonResponse(standaloneDB.getGroups());
+  }
+
+  // 9. ENROLLMENTS
+  if (path.includes('/api/enrollments')) {
+    return jsonResponse([
+      { enrollment_id: 1, course_id: 1, student_id: 1 },
+      { enrollment_id: 2, course_id: 2, student_id: 1 },
+      { enrollment_id: 3, course_id: 3, student_id: 1 },
+      { enrollment_id: 4, course_id: 4, student_id: 1 },
+    ]);
+  }
+
+  // 10. NOTIFICATIONS
   if (path.includes('/api/notifications')) {
     return jsonResponse([
       {
@@ -298,13 +384,17 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     ]);
   }
 
-  // 7. ACADEMIC AI ASSISTANT CHAT
+  // 11. ACADEMIC AI ASSISTANT CHAT
   if (path.includes('/api/ai/chat') && method === 'POST') {
     const question = body.message || '';
     const reply = generateAcademicAiResponse(question, body.context);
     return jsonResponse({ reply, source: 'academic_engine' });
   }
 
-  // Fallback default response
+  // Safe fallback: Return array for GET requests so .map() or Array.isArray() never crashes
+  if (method === 'GET') {
+    return jsonResponse([]);
+  }
+
   return jsonResponse({ success: true });
 }

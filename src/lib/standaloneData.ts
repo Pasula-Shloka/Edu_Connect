@@ -236,6 +236,120 @@ const INITIAL_ATTENDANCE = [
   { course_id: 4, course_code: '22CS3104', course_name: 'Computer Communication Networks', conducted: 26, attended: 21, percentage: 80.7 },
 ];
 
+const INITIAL_LIVE_CLASSES = [
+  {
+    live_class_id: 1,
+    course_id: 1,
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    faculty_id: 3,
+    faculty_name: 'Dr. K. Srinivas Rao',
+    title: 'Transaction Management & ACID Implementation',
+    description: 'Interactive lecture on two-phase locking, dirty reads, and recovery algorithms.',
+    room_name: 'KLEduConnect-DBMS-Lecture-1',
+    start_time: new Date(Date.now() - 15 * 60000).toISOString(),
+    end_time: null,
+    status: 'live',
+    created_at: new Date(Date.now() - 30 * 60000).toISOString(),
+  },
+  {
+    live_class_id: 2,
+    course_id: 2,
+    course_code: '22CS3102',
+    course_name: 'Data Structures and Algorithms',
+    faculty_id: 3,
+    faculty_name: 'Dr. K. Srinivas Rao',
+    title: 'Dynamic Programming: 0/1 Knapsack & Bellman-Ford',
+    description: 'Upcoming problem-solving session for mid-semester exam preparation.',
+    room_name: 'KLEduConnect-DSA-Lecture-2',
+    start_time: new Date(Date.now() + 120 * 60000).toISOString(),
+    end_time: null,
+    status: 'scheduled',
+    created_at: new Date().toISOString(),
+  },
+];
+
+const INITIAL_RESOURCES = [
+  {
+    resource_id: 1,
+    course_id: 1,
+    unit_id: 1,
+    title: 'Unit 1: Relational Algebra & SQL Query Optimization Slides',
+    description: 'Official lecture presentation slides with solved sample queries.',
+    resource_type: 'slide',
+    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    created_at: '2026-09-10T10:00:00Z',
+  },
+  {
+    resource_id: 2,
+    course_id: 1,
+    unit_id: 2,
+    title: 'Normalization Deep Dive: 1NF to BCNF Cheatsheet',
+    description: 'Comprehensive study guide with functional dependency decomposition rules.',
+    resource_type: 'pdf',
+    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    created_at: '2026-09-15T11:00:00Z',
+  },
+  {
+    resource_id: 3,
+    course_id: 2,
+    unit_id: 1,
+    title: 'AVL Trees & Red-Black Tree Rotation Visualizations',
+    description: 'Visual reference guide detailing left and right rotation cases.',
+    resource_type: 'document',
+    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    created_at: '2026-09-18T09:30:00Z',
+  },
+];
+
+const INITIAL_DISCUSSIONS = [
+  {
+    discussion_id: 1,
+    course_id: 1,
+    course_name: 'Database Management Systems',
+    course_code: '22CS3101',
+    user_id: 1,
+    user_name: 'Shloka Reddy',
+    user_role: 'student',
+    title: 'When to prefer B-Tree Index over Hash Index in PostgreSQL?',
+    content: 'In our lab session, we noticed range queries (e.g. BETWEEN or >) were not using Hash indexes. Why is B-Tree preferred for range queries?',
+    created_at: '2026-09-27T16:00:00Z',
+    reply_count: 2,
+  },
+  {
+    discussion_id: 2,
+    course_id: 2,
+    course_name: 'Data Structures and Algorithms',
+    course_code: '22CS3102',
+    user_id: 3,
+    user_name: 'Dr. K. Srinivas Rao',
+    user_role: 'faculty',
+    title: 'Clarification on Dijkstra vs Bellman-Ford for negative edge weights',
+    content: 'Please remember that Dijkstra will produce incorrect shortest path trees when negative edge cycles exist. Always check your graph constraints before selecting the algorithm.',
+    created_at: '2026-09-28T09:00:00Z',
+    reply_count: 4,
+  },
+];
+
+const INITIAL_GROUPS = [
+  {
+    group_id: 1,
+    name: 'DBMS Research Circle',
+    group_name: 'DBMS Research Circle',
+    description: 'Collaborative group for query tuning, ER diagrams, and normalization review.',
+    course_id: 1,
+    course_name: 'Database Management Systems',
+    course_code: '22CS3101',
+    created_by: 1,
+    member_count: 5,
+    members: [
+      { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
+      { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
+      { user_id: 6, full_name: 'Rahul Varma', role: 'Member' },
+    ],
+  },
+];
+
 // Helper to get or initialize persistent data
 function getOrInit<T>(key: string, initial: T): T {
   try {
@@ -335,4 +449,63 @@ export const standaloneDB = {
   },
 
   getAttendance: () => getOrInit('attendance', INITIAL_ATTENDANCE),
+
+  getLiveClasses: () => getOrInit('live_classes', INITIAL_LIVE_CLASSES),
+  saveLiveClass: (item: any) => {
+    const list = standaloneDB.getLiveClasses();
+    const newClass = {
+      live_class_id: list.length + 1,
+      status: 'scheduled',
+      created_at: new Date().toISOString(),
+      ...item,
+    };
+    list.unshift(newClass);
+    localStorage.setItem('educonnect_live_classes', JSON.stringify(list));
+    return newClass;
+  },
+
+  getResources: (courseId?: number) => {
+    const all = getOrInit('resources', INITIAL_RESOURCES);
+    if (!courseId) return all;
+    return all.filter((r: any) => Number(r.course_id) === Number(courseId));
+  },
+  saveResource: (item: any) => {
+    const list = standaloneDB.getResources();
+    const newRes = {
+      resource_id: list.length + 1,
+      created_at: new Date().toISOString(),
+      ...item,
+    };
+    list.unshift(newRes);
+    localStorage.setItem('educonnect_resources', JSON.stringify(list));
+    return newRes;
+  },
+
+  getDiscussions: () => getOrInit('discussions', INITIAL_DISCUSSIONS),
+  saveDiscussion: (item: any) => {
+    const list = standaloneDB.getDiscussions();
+    const newDisc = {
+      discussion_id: list.length + 1,
+      reply_count: 0,
+      created_at: new Date().toISOString(),
+      ...item,
+    };
+    list.unshift(newDisc);
+    localStorage.setItem('educonnect_discussions', JSON.stringify(list));
+    return newDisc;
+  },
+
+  getGroups: () => getOrInit('groups', INITIAL_GROUPS),
+  saveGroup: (item: any) => {
+    const list = standaloneDB.getGroups();
+    const newGrp = {
+      group_id: list.length + 1,
+      member_count: 1,
+      created_at: new Date().toISOString(),
+      ...item,
+    };
+    list.unshift(newGrp);
+    localStorage.setItem('educonnect_groups', JSON.stringify(list));
+    return newGrp;
+  },
 };

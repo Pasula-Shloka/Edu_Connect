@@ -1,5 +1,7 @@
 logs
 *.log
+.bolt
+.bolt/*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

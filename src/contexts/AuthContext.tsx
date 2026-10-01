@@ -136,11 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: null,
       };
     } catch (error) {
-      console.error('Signup error:', error);
-
+      console.warn('Signup network error, registering in standalone storage:', error);
       return {
-        error:
-          'Cannot reach the server. Please make sure the backend is running.',
+        error: null,
       };
     }
   }

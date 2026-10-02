@@ -10,7 +10,7 @@ EduConnect includes an intelligent standalone client-side engine with persistent
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/<YOUR_GITHUB_USERNAME>/Edu_Connect.git
+git clone https://github.com/Pasula-Shloka/Edu_Connect.git
 cd Edu_Connect
 ```
 

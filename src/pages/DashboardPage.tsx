@@ -29,11 +29,6 @@ import {
   ClipboardList,
   Briefcase,
   UserPlus,
-  KeyRound,
-  Cpu,
-  Copy,
-  Check,
-  X,
 } from 'lucide-react';
 
 interface DashboardPageProps {
@@ -102,7 +97,7 @@ type AdminUser = {
 const API_URL = 'http://localhost:5001';
 
 export default function DashboardPage({ onNavigate }: DashboardPageProps) {
-  const { profile, jwtToken } = useAuth();
+  const { profile } = useAuth();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -114,15 +109,6 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
   const [attendancePercent, setAttendancePercent] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAdminJwtModal, setShowAdminJwtModal] = useState(false);
-  const [jwtCopied, setJwtCopied] = useState(false);
-
-  function copyJwt() {
-    if (!jwtToken) return;
-    navigator.clipboard.writeText(jwtToken);
-    setJwtCopied(true);
-    setTimeout(() => setJwtCopied(false), 2000);
-  }
 
   const role = profile?.role?.toLowerCase() || 'student';
   const userId = Number(profile?.user_id || profile?.id);
@@ -328,122 +314,6 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         </div>
 
-        {/* Core System Architecture & Microservices Infrastructure (Admin View Only) */}
-        <div className="card p-5 sm:p-6 border-slate-200 dark:border-slate-800">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 mb-1.5">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Backend Infrastructure & Polyglot Microservices
-              </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Core System Architecture & Security Health
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Live monitoring for PostgreSQL, Express Gateway, FastAPI, Flask, and signed JWT authentication
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAdminJwtModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-semibold transition"
-              >
-                <KeyRound className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Audit JWT Token</span>
-              </button>
-              <a
-                href="http://localhost:8000/docs"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-xs font-semibold transition"
-              >
-                <Cpu className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>FastAPI Docs</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {/* 1. PostgreSQL */}
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
-                    <Database className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">PostgreSQL DB</h4>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">Port 5432</span>
-                  </div>
-                </div>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                10 relational tables, foreign key constraints & connection pooling active.
-              </p>
-            </div>
-
-            {/* 2. Express Core Gateway */}
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300">
-                    <Server className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Express Gateway</h4>
-                    <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400">Port 5001</span>
-                  </div>
-                </div>
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Node.js REST API gateway, CRUD operations, PostgreSQL client integration.
-              </p>
-            </div>
-
-            {/* 3. FastAPI Service */}
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
-                    <Cpu className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">FastAPI Service</h4>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">Port 8000</span>
-                  </div>
-                </div>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Python 3.13 asynchronous AI reasoning, interactive Swagger documentation.
-              </p>
-            </div>
-
-            {/* 4. Flask Reports Service */}
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300">
-                    <FileText className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Flask Reports</h4>
-                    <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400">Port 5002</span>
-                  </div>
-                </div>
-                <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Official student transcripts and UGC 75% attendance audit calculations.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Admin Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -763,120 +633,6 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             ))}
           </div>
         </div>
-
-        {/* Administrator JWT & Security Audit Modal */}
-        {showAdminJwtModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-            <div className="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60">
-                    <KeyRound className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      JWT Authentication & Session Security Audit
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Administrative cryptographic verification for student, faculty & microservice tokens.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAdminJwtModal(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Active JWT Token */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
-                      Active Signed JWT Token (Bearer)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={copyJwt}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                    >
-                      {jwtCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span>{jwtCopied ? 'Copied!' : 'Copy Token'}</span>
-                    </button>
-                    <a
-                      href="https://jwt.io"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 text-[11px] font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition"
-                    >
-                      <span>Inspect on jwt.io</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Token String Box */}
-                <div className="p-3 rounded-xl bg-slate-950 text-slate-300 font-mono text-[11px] break-all border border-slate-800 max-h-24 overflow-y-auto select-all leading-relaxed">
-                  {jwtToken || 'No active JWT token found. Sign in to generate.'}
-                </div>
-
-                {/* Decoded Claims Summary */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                    <span className="block text-[10px] text-slate-400">Algorithm</span>
-                    <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">HS256 (HMAC)</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                    <span className="block text-[10px] text-slate-400">Subject / User ID</span>
-                    <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">{userId || '1'}</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                    <span className="block text-[10px] text-slate-400">Role Claim</span>
-                    <span className="font-semibold capitalize text-purple-600 dark:text-purple-400 font-mono">admin</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                    <span className="block text-[10px] text-slate-400">Expiration</span>
-                    <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">7 Days</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Architecture Notes */}
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
-                <span className="block font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[10px]">
-                  Cross-Service Microservice Verification
-                </span>
-                <p className="text-[11px] leading-relaxed">
-                  • <strong>Express Gateway (Port 5001):</strong> Signs and decodes token on login/signup, verifying identity against PostgreSQL <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">users</code> table.
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  • <strong>FastAPI (Port 8000):</strong> Intercepts <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">Authorization: Bearer &lt;token&gt;</code> via <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">HTTPBearer</code> dependency before allowing code evaluation requests.
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  • <strong>Flask (Port 5002):</strong> Uses <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">PyJWT</code> with shared secret to cryptographically validate student transcripts and attendance audits.
-                </p>
-              </div>
-
-              {/* Footer */}
-              <div className="pt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowAdminJwtModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold hover:opacity-90 transition"
-                >
-                  Close Inspector
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

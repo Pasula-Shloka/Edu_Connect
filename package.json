@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm --prefix backend run dev\" \"vite\"",
+    "dev:all": "concurrently -n \"NODE,FASTAPI,FLASK,VITE\" -c \"blue,yellow,magenta,green\" \"npm --prefix backend run dev\" \"npm run dev:fastapi\" \"npm run dev:flask\" \"vite\"",
+    "dev:fastapi": "python3 -m uvicorn python_services.fastapi_app.main:app --port 8000 --reload",
+    "dev:flask": "python3 python_services/flask_app/app.py",
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix backend run dev",
     "build": "vite build",

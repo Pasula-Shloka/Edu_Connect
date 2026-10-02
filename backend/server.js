@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const OpenAI = require("openai");
 const pool = require("./db");
 const { generateAcademicAiResponse } = require("./academicAiEngine");
+const { generateToken, verifyToken, authMiddleware, requireRole } = require("./jwtHelper");
 
 const app = express();
 app.use(cors({
@@ -96,9 +97,14 @@ app.post("/api/auth/signup", async (req, res) => {
             [email, hashedPassword, full_name, role]
         );
 
+        const createdUser = result.rows[0];
+        const token = generateToken(createdUser);
+
         res.status(201).json({
             message: "Signup successful",
-            user: result.rows[0]
+            token,
+            token_type: "Bearer",
+            user: createdUser
         });
 
     } catch (error) {
@@ -163,8 +169,12 @@ app.post("/api/auth/signin", async (req, res) => {
             });
         }
 
+        const token = generateToken(user);
+
         res.json({
             message: "Login successful",
+            token,
+            token_type: "Bearer",
             user: {
                 user_id: user.user_id,
                 email: user.email,
@@ -180,6 +190,25 @@ app.post("/api/auth/signin", async (req, res) => {
             error: "Signin failed"
         });
     }
+});
+
+// JWT Verification and Token Info Endpoints for Viva / Review
+app.get("/api/auth/verify", authMiddleware, (req, res) => {
+    res.json({
+        valid: true,
+        message: "JWT token verified successfully",
+        user: req.user
+    });
+});
+
+app.get("/api/auth/token-info", authMiddleware, (req, res) => {
+    res.json({
+        status: "authenticated",
+        algorithm: "HS256",
+        issuer: req.user.issuer || "KL-EduConnect-Auth-Service",
+        expiresIn: "7 days",
+        claims: req.user
+    });
 });
 
 /* =========================================================

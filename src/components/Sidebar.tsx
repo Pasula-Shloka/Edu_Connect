@@ -132,8 +132,8 @@ export default function Sidebar({
           onClick={() => onNavigate('dashboard')}
           className="flex w-full items-center gap-3 text-left"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-700 text-white shadow-sm">
-            <GraduationCap className="h-6 w-6" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <img src="./klh-logo.png" alt="KL University" className="h-full w-full object-contain" />
           </div>
 
           <div className="min-w-0">

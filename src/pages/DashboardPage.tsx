@@ -261,20 +261,31 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {/* Admin Header Banner */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 mb-2">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Administrator Control Center • University Academic ERP
+        {/* Admin Header Banner with Campus Photo */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm text-white">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url('./campus.jpg')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-900/75 backdrop-blur-[1px]" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex h-14 w-auto shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-md">
+                <img src="./klh-logo.png" alt="KL University" className="h-10 w-auto object-contain" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 dark:text-white">
-                Welcome, System Administrator
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Authorized Admin: {profile?.email} • Database: digital_learning_db
-              </p>
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-purple-950/80 text-purple-300 border border-purple-800 mb-2">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Administrator Control Center • University Academic ERP
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold font-display text-white">
+                  Welcome, System Administrator
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                  Authorized Admin: {profile?.email} • KL Deemed to be University
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
@@ -667,19 +678,30 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
     return (
       <div className="space-y-6 animate-fade-in">
-        {/* Faculty Header Banner */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 mb-2">
-                Faculty Academic Portal • Fall Semester 2026
+        {/* Faculty Header Banner with Campus Photo */}
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm text-white">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url('./campus.jpg')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-900/75 backdrop-blur-[1px]" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex h-14 w-auto shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-md">
+                <img src="./klh-logo.png" alt="KL University" className="h-10 w-auto object-contain" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 dark:text-white">
-                Welcome, {profile?.full_name || 'Professor'}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Department of Computer Science & Engineering • Faculty ID #{userId}
-              </p>
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800 mb-2">
+                  Faculty Academic Portal • Fall Semester 2026
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold font-display text-white">
+                  Welcome, {profile?.full_name || 'Professor'}
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                  Department of Computer Science & Engineering • Faculty ID #{userId}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -692,23 +714,23 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
               </button>
               <button
                 onClick={() => onNavigate('attendance')}
-                className="btn-secondary"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
               >
-                <CalendarCheck className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                <CalendarCheck className="h-4 w-4 text-emerald-300" />
                 <span>Attendance</span>
               </button>
               <button
                 onClick={() => onNavigate('students')}
-                className="btn-secondary"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
               >
-                <UserCheck className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                <UserCheck className="h-4 w-4 text-emerald-300" />
                 <span>My Students</span>
               </button>
               <button
                 onClick={() => onNavigate('liveclasses')}
-                className="btn-secondary"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
               >
-                <Video className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                <Video className="h-4 w-4 text-emerald-300" />
                 <span>Live Class</span>
               </button>
             </div>
@@ -1019,19 +1041,30 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Student Header */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/50 mb-2">
-              Student Academic Portal • Fall Semester 2026
+      {/* Student Header Banner with Campus Photo */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm text-white">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('./campus.jpg')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-900/75 backdrop-blur-[1px]" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex h-14 w-auto shrink-0 items-center justify-center rounded-xl bg-white p-2 shadow-md">
+              <img src="./klh-logo.png" alt="KL University" className="h-10 w-auto object-contain" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 dark:text-white">
-              Welcome back, {profile?.full_name?.split(' ')[0] || 'Student'}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              B.Tech Computer Science & Engineering • Student ID #{userId}
-            </p>
+            <div>
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-red-950/80 text-red-300 border border-red-900/50 mb-2">
+                Student Academic Portal • Fall Semester 2026
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold font-display text-white">
+                Welcome back, {profile?.full_name?.split(' ')[0] || 'Student'}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                B.Tech Computer Science & Engineering • Student ID #{userId}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -1044,9 +1077,9 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             </button>
             <button
               onClick={() => onNavigate('assignments')}
-              className="btn-secondary"
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
             >
-              <ClipboardCheck className="h-4 w-4" />
+              <ClipboardCheck className="h-4 w-4 text-red-300" />
               <span>Submit Assignment</span>
             </button>
           </div>

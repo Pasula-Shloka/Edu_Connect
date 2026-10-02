@@ -71,25 +71,32 @@ export default function AuthPage() {
         </button>
       </div>
 
-      {/* Left panel - Institutional University Showcase */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between border-r border-slate-800">
+      {/* Left panel - Institutional University Showcase with Real Campus Photo */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden text-white p-12 flex-col justify-between border-r border-slate-800">
+        {/* Background Campus Photo with Gradient Overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('./campus.jpg')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/85 to-slate-900/75 backdrop-blur-[1px]" />
+
         {/* University Header */}
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-700 text-white shadow-md">
-            <GraduationCap className="h-7 w-7" />
+        <div className="flex items-center gap-3.5 relative z-10">
+          <div className="flex h-14 w-auto items-center justify-center rounded-xl bg-white p-2 shadow-lg">
+            <img src="./klh-logo.png" alt="KL University" className="h-10 w-auto object-contain" />
           </div>
           <div>
             <h1 className="text-2xl font-bold font-display tracking-tight text-white leading-tight">
               KL University
             </h1>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="text-xs text-slate-300 font-medium">
               Academic Management & Digital Learning Portal
             </p>
           </div>
         </div>
 
         {/* Central Content */}
-        <div className="space-y-6 max-w-lg">
+        <div className="space-y-6 max-w-lg relative z-10">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-950/80 text-red-300 border border-red-800/60">
               <Award className="h-3.5 w-3.5 text-red-400" /> NAAC A++ Accredited • Category 1 University
@@ -114,7 +121,7 @@ export default function AuthPage() {
             ].map((item, idx) => (
               <div
                 key={idx}
-                className="p-3.5 rounded-xl border border-slate-800 bg-slate-800/40"
+                className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-sm"
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
@@ -127,7 +134,7 @@ export default function AuthPage() {
         </div>
 
         {/* Footer info */}
-        <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/80 pt-4">
+        <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-4 relative z-10">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>Secure PostgreSQL Session • KLH Network</span>
@@ -139,16 +146,16 @@ export default function AuthPage() {
       {/* Right panel - Executive Login / Signup Form */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <div className="w-full max-w-md animate-slide-up">
-          {/* Mobile University Header */}
-          <div className="lg:hidden flex items-center gap-3 mb-6">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-700 text-white shadow-sm">
-              <GraduationCap className="h-6 w-6" />
+          {/* Brand Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-12 w-auto items-center justify-center rounded-xl bg-white p-2 border border-slate-200 dark:border-slate-800 shadow-sm">
+              <img src="./klh-logo.png" alt="KL University" className="h-8 w-auto object-contain" />
             </div>
             <div>
-              <h2 className="text-xl font-bold font-display text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold font-display text-slate-900 dark:text-white leading-tight">
                 KL University
               </h2>
-              <p className="text-xs text-slate-500">KL EduConnect Portal</p>
+              <p className="text-xs text-slate-500">KL EduConnect Academic Portal</p>
             </div>
           </div>
 

@@ -2,6 +2,8 @@
 
 EduConnect is a comprehensive digital academic and learning management platform designed for students, faculty, and administrators. Built with React, TypeScript, Tailwind CSS, and Express.
 
+🌐 **Live Demo Website:** [https://pasula-shloka.github.io/Edu_Connect/](https://pasula-shloka.github.io/Edu_Connect/)
+
 ---
 
 ## 🚀 Quick Start (For Friends & Reviewers)

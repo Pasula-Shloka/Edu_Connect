@@ -67,9 +67,11 @@ export default function Sidebar({
         { key: 'students', label: 'Students', icon: UserCheck },
         { key: 'faculty', label: 'Faculty', icon: Briefcase },
         { key: 'courses', label: 'Courses', icon: BookOpen },
+        { key: 'resources', label: 'Study Resources', icon: FileText },
         { key: 'exams', label: 'Exam Scheduler', icon: ClipboardList },
         { key: 'attendance', label: 'Attendance', icon: CalendarCheck },
         { key: 'analytics', label: 'System Analytics', icon: BarChart3 },
+        { key: 'assistant', label: 'AI Academic Assistant', icon: Bot, badge: 'AI' },
       ];
     }
 
@@ -78,6 +80,7 @@ export default function Sidebar({
         { key: 'dashboard', label: 'Faculty Dashboard', icon: LayoutDashboard },
         { key: 'courses', label: 'My Assigned Courses', icon: BookOpen },
         { key: 'students', label: 'My Students', icon: UserCheck },
+        { key: 'resources', label: 'Study Resources', icon: FileText },
         { key: 'exams', label: 'Exams & Grading', icon: ClipboardList },
         { key: 'attendance', label: 'Mark Attendance', icon: CalendarCheck },
         { key: 'assignments', label: 'Assignments', icon: ClipboardCheck },
@@ -85,6 +88,7 @@ export default function Sidebar({
         { key: 'liveclasses', label: 'Live Lectures', icon: Video },
         { key: 'discussions', label: 'Subject Forums', icon: MessageSquare },
         { key: 'analytics', label: 'Class Analytics', icon: BarChart3 },
+        { key: 'assistant', label: 'AI Academic Assistant', icon: Bot, badge: 'AI' },
       ];
     }
 

@@ -143,6 +143,9 @@ export default function ResourcesPage() {
         availableCourses = allCourses.filter(
           (course) => Number(course.faculty_id) === Number(userId)
         );
+        if (availableCourses.length === 0) {
+          availableCourses = allCourses;
+        }
       } else if (profile.role === 'admin') {
         availableCourses = allCourses;
       } else {
@@ -158,6 +161,9 @@ export default function ResourcesPage() {
           availableCourses = allCourses.filter((course) =>
             courseIds.includes(Number(course.course_id))
           );
+        }
+        if (availableCourses.length === 0) {
+          availableCourses = allCourses;
         }
       }
 
@@ -331,18 +337,16 @@ export default function ResourcesPage() {
             </p>
           </div>
 
-          {(isFaculty || isAdmin) && (
-            <button
-              onClick={() => {
-                setShowAdd(true);
-                setUnits([]);
-              }}
-              className="btn-primary shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Resource</span>
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setShowAdd(true);
+              setUnits([]);
+            }}
+            className="btn-primary shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{isFaculty || isAdmin ? 'Add Resource' : 'Share Study Material'}</span>
+          </button>
         </div>
       </div>
 

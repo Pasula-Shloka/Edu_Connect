@@ -252,21 +252,21 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in text-slate-900 dark:text-slate-100">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-bold font-display tracking-tight text-slate-900 dark:text-white">
             Courses
           </h1>
 
-          <p className="text-gray-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {profile?.role === 'faculty'
-              ? 'Manage your assigned courses'
+              ? 'Manage your assigned courses and student rosters'
               : profile?.role === 'admin'
-              ? 'Manage all courses'
-              : 'Explore and enroll in your courses'}
+              ? 'Manage all university departmental courses'
+              : 'Explore, review curriculum, and enroll in your academic courses'}
           </p>
         </div>
 
@@ -274,7 +274,7 @@ export default function CoursesPage() {
           profile?.role === 'admin') && (
           <button
             onClick={openCreateForm}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2.5 bg-red-700 hover:bg-red-800 text-white rounded-xl shadow-sm text-sm font-semibold transition"
           >
             <Plus className="w-4 h-4" />
             Create Course
@@ -284,22 +284,22 @@ export default function CoursesPage() {
 
       {/* Create Course Form */}
       {showCreateForm && (
-        <div className="bg-white border rounded-xl p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 Create New Course
               </h2>
 
-              <p className="text-sm text-gray-500 mt-1">
-                Add a new course to your faculty account
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Add a new course to your faculty academic curriculum
               </p>
             </div>
 
             <button
               onClick={closeCreateForm}
               disabled={creating}
-              className="p-2 rounded-lg hover:bg-gray-100"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -310,7 +310,7 @@ export default function CoursesPage() {
             className="space-y-4"
           >
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Course Code
               </label>
 
@@ -320,14 +320,14 @@ export default function CoursesPage() {
                 onChange={(e) =>
                   setCourseCode(e.target.value)
                 }
-                placeholder="Example: CS102"
+                placeholder="Example: CS3101"
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Course Name
               </label>
 
@@ -337,14 +337,14 @@ export default function CoursesPage() {
                 onChange={(e) =>
                   setCourseName(e.target.value)
                 }
-                placeholder="Example: Data Structures"
+                placeholder="Example: Design and Analysis of Algorithms"
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Description
               </label>
 
@@ -353,24 +353,24 @@ export default function CoursesPage() {
                 onChange={(e) =>
                   setCourseDescription(e.target.value)
                 }
-                placeholder="Enter course description"
+                placeholder="Enter detailed syllabus overview and learning outcomes"
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
 
             {error && (
-              <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+              <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 rounded-xl text-xs">
                 {error}
               </div>
             )}
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={closeCreateForm}
                 disabled={creating}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition"
               >
                 Cancel
               </button>
@@ -378,7 +378,7 @@ export default function CoursesPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-red-700 text-white rounded-xl hover:bg-red-800 disabled:opacity-50 text-xs font-semibold shadow-sm transition"
               >
                 {creating && (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -395,20 +395,23 @@ export default function CoursesPage() {
 
       {/* Error */}
       {error && !showCreateForm && (
-        <div className="p-4 bg-red-100 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 rounded-xl text-sm">
           {error}
         </div>
       )}
 
       {/* No Courses */}
       {courses.length === 0 ? (
-        <div className="text-center py-12">
-          <BookOpen className="w-12 h-12 mx-auto text-gray-400" />
+        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
+          <BookOpen className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-600 mb-3" />
 
-          <p className="mt-3 text-gray-500">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             {profile?.role === 'faculty'
               ? 'No courses are assigned to you'
               : 'No courses available'}
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Courses created or assigned will appear here in your catalogue.
           </p>
         </div>
       ) : (
@@ -420,44 +423,43 @@ export default function CoursesPage() {
             return (
               <div
                 key={course.course_id}
-                className="bg-white rounded-xl border p-5 shadow-sm"
+                className="bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between"
               >
+                <div>
+                  {/* Course Icon + Code */}
+                  <div className="flex items-start justify-between">
+                    <div className="p-2.5 bg-red-50 dark:bg-red-950/50 rounded-xl text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/40">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
 
-                {/* Course Icon + Code */}
-                <div className="flex items-start justify-between">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <BookOpen className="w-6 h-6 text-blue-600" />
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      {course.course_code}
+                    </span>
                   </div>
 
-                  <span className="text-sm font-medium text-gray-500">
-                    {course.course_code}
-                  </span>
-                </div>
+                  {/* Course Name */}
+                  <h2 className="mt-4 text-base font-bold text-slate-900 dark:text-white leading-snug">
+                    {course.course_name}
+                  </h2>
 
-                {/* Course Name */}
-                <h2 className="mt-4 text-lg font-semibold">
-                  {course.course_name}
-                </h2>
+                  {/* Description */}
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 min-h-[38px] line-clamp-2 leading-relaxed">
+                    {course.description ||
+                      'Comprehensive syllabus covering theory, problem sets, and practical assignments.'}
+                  </p>
 
-                {/* Description */}
-                <p className="mt-2 text-sm text-gray-500 min-h-[40px]">
-                  {course.description ||
-                    'No description available'}
-                </p>
+                  {/* Details */}
+                  <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Institutional Course • KLH</span>
+                    </div>
 
-                {/* Details */}
-                <div className="mt-5 space-y-2 text-sm text-gray-500">
-
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Academic Course
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Active Academic Semester</span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Available now
-                  </div>
-
                 </div>
 
                 {/* Student Enrollment */}
@@ -470,25 +472,25 @@ export default function CoursesPage() {
                       enrolled ||
                       enrolling === course.course_id
                     }
-                    className={`w-full mt-5 px-4 py-2 rounded-lg font-medium ${
+                    className={`w-full mt-4 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       enrolled
-                        ? 'bg-green-100 text-green-700 cursor-default'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 cursor-default'
+                        : 'bg-red-700 hover:bg-red-800 text-white shadow-sm'
                     }`}
                   >
                     {enrolling === course.course_id
                       ? 'Enrolling...'
                       : enrolled
-                      ? 'Enrolled'
-                      : 'Enroll'}
+                      ? '✓ Enrolled'
+                      : 'Enroll in Course'}
                   </button>
                 )}
 
                 {/* Faculty/Admin */}
                 {(profile?.role === 'faculty' ||
                   profile?.role === 'admin') && (
-                  <div className="w-full mt-5 px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-center font-medium">
-                    Course Available
+                  <div className="w-full mt-4 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 text-center text-xs font-semibold">
+                    Course Active
                   </div>
                 )}
 

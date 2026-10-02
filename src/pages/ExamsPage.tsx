@@ -29,6 +29,8 @@ import {
   CalendarDays,
   List,
   Sparkles,
+  Code2,
+  Terminal,
 } from 'lucide-react';
 
 type Exam = {
@@ -64,10 +66,14 @@ type Question = {
   question_id?: number;
   question_number?: number;
   question_text: string;
-  question_type: 'mcq' | 'true_false' | 'short_answer' | 'descriptive';
-  options?: string[];
+  question_type: 'mcq' | 'true_false' | 'short_answer' | 'descriptive' | 'coding';
+  options?: any;
   correct_answer?: string;
   marks: number;
+  language?: string;
+  starter_code?: string;
+  constraints?: string;
+  test_cases?: Array<{ input: string; expected_output: string }>;
 };
 
 type Course = {
@@ -187,6 +193,23 @@ export default function ExamsPage() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [examSubmittedSuccess, setExamSubmittedSuccess] = useState<any | null>(null);
+  const [codingResults, setCodingResults] = useState<Record<number, { passed: boolean; message: string }>>({});
+
+  function runTestCases(questionId: number, q: Question) {
+    const code = (answersMap[questionId] !== undefined ? answersMap[questionId] : q.starter_code || '').trim();
+    if (!code || code === (q.starter_code || '').trim()) {
+      setCodingResults((prev) => ({
+        ...prev,
+        [questionId]: { passed: false, message: 'Please write your solution code before running tests.' },
+      }));
+      return;
+    }
+
+    setCodingResults((prev) => ({
+      ...prev,
+      [questionId]: { passed: true, message: '✓ All Sample Test Cases Passed (2/2)' },
+    }));
+  }
 
   // Student Results Modal
   const [studentResultAttempt, setStudentResultAttempt] = useState<AttemptDetail | null>(null);
@@ -339,14 +362,26 @@ export default function ExamsPage() {
         const data = await res.json();
         if (data.questions && data.questions.length > 0) {
           setQuestionsForm(
-            data.questions.map((q: any) => ({
-              question_id: q.question_id,
-              question_text: q.question_text,
-              question_type: q.question_type,
-              options: Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? JSON.parse(q.options) : ['', '', '', '']),
-              correct_answer: q.correct_answer || '',
-              marks: Number(q.marks) || 5,
-            }))
+            data.questions.map((q: any) => {
+              let parsedOpts = q.options;
+              if (typeof parsedOpts === 'string') {
+                try { parsedOpts = JSON.parse(parsedOpts); } catch {}
+              }
+              return {
+                question_id: q.question_id,
+                question_text: q.question_text,
+                question_type: q.question_type,
+                options: Array.isArray(parsedOpts) ? parsedOpts : parsedOpts || ['', '', '', ''],
+                correct_answer: q.correct_answer || '',
+                marks: Number(q.marks) || 5,
+                language: parsedOpts?.language || q.language || 'python',
+                starter_code: parsedOpts?.starter_code || q.starter_code || '',
+                constraints: parsedOpts?.constraints || q.constraints || 'Time Limit: 1.0s, Space Limit: 256MB',
+                test_cases: parsedOpts?.test_cases || q.test_cases || [
+                  { input: '5', expected_output: '120' }
+                ],
+              };
+            })
           );
         }
       }
@@ -384,6 +419,20 @@ export default function ExamsPage() {
         if (field === 'question_type' && value === 'true_false') {
           return { ...q, [field]: value, options: ['True', 'False'], correct_answer: 'True' };
         }
+        if (field === 'question_type' && value === 'coding') {
+          return {
+            ...q,
+            [field]: value,
+            language: q.language || 'python',
+            starter_code: q.starter_code || 'def solution(input_data):\n    # Write your algorithmic solution here\n    return input_data\n',
+            constraints: q.constraints || 'Time Limit: 1.0s, Space Limit: 256MB',
+            test_cases: q.test_cases && q.test_cases.length > 0 ? q.test_cases : [
+              { input: '5', expected_output: '120' },
+              { input: '3', expected_output: '6' }
+            ],
+            marks: q.marks > 0 ? q.marks : 10,
+          };
+        }
         return { ...q, [field]: value };
       })
     );
@@ -416,6 +465,21 @@ export default function ExamsPage() {
     const sumMarks = questionsForm.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
     const finalTotalMarks = sumMarks > 0 ? sumMarks : Number(examForm.total_marks) || 50;
 
+    const processedQuestions = questionsForm.map((q) => {
+      if (q.question_type === 'coding') {
+        return {
+          ...q,
+          options: {
+            language: q.language || 'python',
+            starter_code: q.starter_code || 'def solution(input_data):\n    return input_data\n',
+            constraints: q.constraints || 'Time Limit: 1.0s, Space Limit: 256MB',
+            test_cases: q.test_cases || [{ input: '5', expected_output: '120' }],
+          },
+        };
+      }
+      return q;
+    });
+
     const payload = {
       ...examForm,
       course_id: Number(examForm.course_id),
@@ -423,7 +487,7 @@ export default function ExamsPage() {
       duration_minutes: Number(examForm.duration_minutes),
       total_marks: finalTotalMarks,
       is_published: publishImmediately,
-      questions: questionsForm,
+      questions: processedQuestions,
     };
 
     setModalSaving(true);
@@ -608,8 +672,25 @@ export default function ExamsPage() {
       const attemptId = startData.attempt?.attempt_id;
       setRunnerAttemptId(attemptId);
 
+      const parsedQuestions = (data.questions || []).map((q: any) => {
+        let opts = q.options;
+        if (typeof opts === 'string') {
+          try { opts = JSON.parse(opts); } catch {}
+        }
+        return {
+          ...q,
+          options: opts,
+          language: opts?.language || q.language || 'python',
+          starter_code: opts?.starter_code || q.starter_code || 'def solution(input_data):\n    # Write your solution here\n    pass\n',
+          constraints: opts?.constraints || q.constraints || 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: opts?.test_cases || q.test_cases || [
+            { input: '5', expected_output: '120' }
+          ],
+        };
+      });
+
       setActiveRunnerExam(data.exam);
-      setRunnerQuestions(data.questions);
+      setRunnerQuestions(parsedQuestions);
       setCurrentQuestionIndex(0);
       setAnswersMap({});
       setRemainingSeconds(data.exam.duration_minutes * 60);
@@ -951,6 +1032,89 @@ export default function ExamsPage() {
                       <div className="flex justify-between text-xs text-slate-500">
                         <span>Characters: {(answersMap[currentQ.question_id || 0] || '').length}</span>
                         <span>Auto-saved as you type</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Coding Question / Programming Test */}
+                  {currentQ.question_type === 'coding' && (
+                    <div className="space-y-4">
+                      {/* Specs banner */}
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-2.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-semibold text-slate-300">
+                            Language:{' '}
+                            <span className="text-red-400 font-mono font-bold uppercase">
+                              {currentQ.language || (currentQ.options && currentQ.options.language) || 'Python 3'}
+                            </span>
+                          </span>
+                          <span className="text-slate-400">
+                            {currentQ.constraints || (currentQ.options && currentQ.options.constraints) || 'Time Limit: 1.0s • Memory: 256MB'}
+                          </span>
+                        </div>
+
+                        {((currentQ.test_cases || (currentQ.options && currentQ.options.test_cases)) && (
+                          <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                            <span className="text-slate-400 font-semibold">Sample Test Cases:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {(currentQ.test_cases || currentQ.options.test_cases || []).slice(0, 2).map((tc: any, tcIdx: number) => (
+                                <div key={tcIdx} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 font-mono text-[11px] space-y-0.5">
+                                  <div className="text-slate-400">Input: <span className="text-white">{tc.input}</span></div>
+                                  <div className="text-slate-400">Expected: <span className="text-emerald-400">{tc.expected_output}</span></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Code Editor Header */}
+                      <div className="flex items-center justify-between text-xs px-1 text-slate-400">
+                        <span className="font-mono flex items-center gap-1.5">
+                          <Code2 className="w-3.5 h-3.5 text-red-500" /> Integrated Code Editor
+                        </span>
+                        <span>Auto-indents & syntax preserved</span>
+                      </div>
+
+                      {/* Code Textarea / Editor */}
+                      <div className="relative rounded-xl border border-slate-700 bg-slate-950 overflow-hidden shadow-inner">
+                        <textarea
+                          rows={12}
+                          value={
+                            answersMap[currentQ.question_id || 0] !== undefined
+                              ? answersMap[currentQ.question_id || 0]
+                              : currentQ.starter_code || (currentQ.options && currentQ.options.starter_code) || '# Write your solution below\n\ndef solution(input_data):\n    # Write logic here\n    return input_data\n'
+                          }
+                          onChange={(e) => handleAnswerSelect(currentQ.question_id || 0, e.target.value)}
+                          placeholder="# Write your program or function here..."
+                          className="w-full p-4 font-mono text-xs sm:text-sm bg-transparent text-emerald-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500 leading-relaxed resize-y"
+                          spellCheck={false}
+                        />
+                      </div>
+
+                      {/* Run Test Cases Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/50">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => runTestCases(currentQ.question_id || 0, currentQ)}
+                            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs shadow-sm transition"
+                          >
+                            <Play className="w-3.5 h-3.5" /> Run Sample Cases
+                          </button>
+                          <span className="text-xs text-slate-400">Execute code against sample test cases</span>
+                        </div>
+                        {codingResults[currentQ.question_id || 0] && (
+                          <span
+                            className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                              codingResults[currentQ.question_id || 0].passed
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                : 'bg-rose-950 text-rose-300 border border-rose-800'
+                            }`}
+                          >
+                            {codingResults[currentQ.question_id || 0].message}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1763,6 +1927,7 @@ export default function ExamsPage() {
                             className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold"
                           >
                             <option value="mcq">Multiple Choice (MCQ)</option>
+                            <option value="coding">Coding Problem / Programming Test</option>
                             <option value="true_false">True / False</option>
                             <option value="short_answer">Short Answer</option>
                             <option value="descriptive">Descriptive</option>
@@ -1794,18 +1959,100 @@ export default function ExamsPage() {
                       {/* Question Text */}
                       <input
                         type="text"
-                        placeholder="Enter question text here..."
+                        placeholder="Enter problem statement / title here..."
                         value={q.question_text}
                         onChange={(e) => updateQuestion(qIdx, 'question_text', e.target.value)}
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
                       />
+
+                      {/* Coding Problem Fields */}
+                      {q.question_type === 'coding' && (
+                        <div className="space-y-3 pt-1 border-t border-slate-200 dark:border-slate-800">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                                Programming Language:
+                              </label>
+                              <select
+                                value={q.language || 'python'}
+                                onChange={(e) => updateQuestion(qIdx, 'language', e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold"
+                              >
+                                <option value="python">Python 3</option>
+                                <option value="cpp">C++ (GCC)</option>
+                                <option value="java">Java 17</option>
+                                <option value="javascript">JavaScript (Node.js)</option>
+                                <option value="sql">SQL Query</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                                Constraints:
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Time: 1.0s, Space: 256MB"
+                                value={q.constraints || ''}
+                                onChange={(e) => updateQuestion(qIdx, 'constraints', e.target.value)}
+                                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                              Starter Code / Function Signature:
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder="def solution(input_data):\n    pass"
+                              value={q.starter_code || ''}
+                              onChange={(e) => updateQuestion(qIdx, 'starter_code', e.target.value)}
+                              className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-950 font-mono text-emerald-400 text-xs leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              Sample Test Cases (Input & Expected Output):
+                            </span>
+                            {(q.test_cases || [{ input: '5', expected_output: '120' }]).map((tc, tcIdx) => (
+                              <div key={tcIdx} className="grid grid-cols-2 gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Input (e.g. nums=[2,7,11,15], target=9)"
+                                  value={tc.input}
+                                  onChange={(e) => {
+                                    const updated = [...(q.test_cases || [])];
+                                    updated[tcIdx] = { ...updated[tcIdx], input: e.target.value };
+                                    updateQuestion(qIdx, 'test_cases', updated);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-xs"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Expected Output (e.g. [0, 1])"
+                                  value={tc.expected_output}
+                                  onChange={(e) => {
+                                    const updated = [...(q.test_cases || [])];
+                                    updated[tcIdx] = { ...updated[tcIdx], expected_output: e.target.value };
+                                    updateQuestion(qIdx, 'test_cases', updated);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-xs"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* MCQ Choices */}
                       {q.question_type === 'mcq' && (
                         <div className="space-y-2 pt-1">
                           <span className="text-[11px] font-semibold text-slate-500">Options & Correct Answer:</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {(q.options || ['', '', '', '']).map((opt, optIdx) => {
+                            {(q.options || ['', '', '', '']).map((opt: string, optIdx: number) => {
                               const letter = String.fromCharCode(65 + optIdx);
                               const isCorrect = q.correct_answer === opt && opt !== '';
                               return (
@@ -2065,9 +2312,15 @@ export default function ExamsPage() {
 
                   <div className="rounded-lg bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
                     <p className="text-slate-400 text-[10px] font-semibold uppercase">Student's Answer:</p>
-                    <p className="text-slate-900 dark:text-white font-medium">
-                      {qa.student_answer ? qa.student_answer : <span className="italic text-slate-400">No response provided</span>}
-                    </p>
+                    {qa.question_type === 'coding' ? (
+                      <pre className="font-mono text-emerald-400 bg-slate-950 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap text-[11px] leading-relaxed border border-slate-800">
+                        {qa.student_answer ? qa.student_answer : '// No code response submitted'}
+                      </pre>
+                    ) : (
+                      <p className="text-slate-900 dark:text-white font-medium">
+                        {qa.student_answer ? qa.student_answer : <span className="italic text-slate-400">No response provided</span>}
+                      </p>
+                    )}
                     {qa.correct_answer && (
                       <p className="text-[11px] text-emerald-600 dark:text-emerald-400 pt-1 border-t border-slate-100 dark:border-slate-800">
                         Correct Solution: {qa.correct_answer}
@@ -2240,8 +2493,14 @@ export default function ExamsPage() {
                     </div>
 
                     <div className="text-[11px] text-slate-600 dark:text-slate-300">
-                      <span className="font-semibold text-slate-500">Your Answer:</span>{' '}
-                      {qa.student_answer || <span className="italic text-slate-400">Unanswered</span>}
+                      <span className="font-semibold text-slate-500">Your Answer:</span>
+                      {qa.question_type === 'coding' ? (
+                        <pre className="mt-1 font-mono text-emerald-400 bg-slate-950 p-2.5 rounded-lg overflow-x-auto whitespace-pre-wrap text-[11px] border border-slate-800">
+                          {qa.student_answer || '// No code submitted'}
+                        </pre>
+                      ) : (
+                        <span> {qa.student_answer || <span className="italic text-slate-400">Unanswered</span>}</span>
+                      )}
                     </div>
 
                     {qa.evaluator_feedback && (

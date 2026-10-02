@@ -61,7 +61,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setUnreadCount(data.filter((n: any) => !n.is_read).length);
+          setUnreadCount(data.filter((n: any) => !n.is_read && !n.read).length);
         }
       }
     } catch (error) {

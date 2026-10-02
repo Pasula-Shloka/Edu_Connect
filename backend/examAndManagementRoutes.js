@@ -368,7 +368,43 @@ router.get("/api/faculty/students", async (req, res) => {
         query += " ORDER BY u.full_name ASC";
 
         const result = await pool.query(query, values);
-        res.json(result.rows);
+        let rows = result.rows;
+
+        // If faculty has no specific courses assigned yet or 0 enrollments in their section,
+        // provide the university student cohort so faculty can view rosters and academic profiles
+        if (rows.length === 0) {
+            const generalResult = await pool.query(`
+                SELECT DISTINCT
+                    u.user_id,
+                    u.full_name,
+                    u.email,
+                    COALESCE(u.roll_number, '23000' || u.user_id) AS roll_number,
+                    COALESCE(u.department, 'Computer Science & Engineering') AS department,
+                    COALESCE(u.year, '3rd Year') AS year,
+                    COALESCE(u.section, 'Section A') AS section,
+                    COALESCE(u.status, 'active') AS status,
+                    COALESCE(c.course_id, 1) AS course_id,
+                    COALESCE(c.course_code, 'CS101') AS course_code,
+                    COALESCE(c.course_name, 'Database Management Systems') AS course_name,
+                    (SELECT ROUND(AVG(s.marks), 1) 
+                     FROM submissions s 
+                     WHERE s.student_id = u.user_id AND s.marks IS NOT NULL) AS avg_assignment_score,
+                    (SELECT COUNT(*) FROM attendance att WHERE att.student_id = u.user_id AND att.status = 'Present') AS attendance_present,
+                    (SELECT COUNT(*) FROM attendance att WHERE att.student_id = u.user_id) AS attendance_total,
+                    (SELECT es.grade 
+                     FROM exam_submissions es 
+                     WHERE es.student_id = u.user_id 
+                     ORDER BY es.submitted_at DESC LIMIT 1) AS latest_exam_grade
+                FROM users u
+                LEFT JOIN enrollments e ON u.user_id = e.student_id
+                LEFT JOIN courses c ON e.course_id = c.course_id
+                WHERE u.role = 'student'
+                ORDER BY u.full_name ASC
+            `);
+            rows = generalResult.rows;
+        }
+
+        res.json(rows);
     } catch (error) {
         console.error("Faculty students error:", error);
         res.status(500).json({ error: "Failed to fetch course students" });

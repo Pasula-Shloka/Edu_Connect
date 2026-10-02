@@ -235,8 +235,23 @@ const INITIAL_ATTENDANCE = [
   { course_id: 3, course_code: '22CS3103', course_name: 'Operating Systems Principles', conducted: 28, attended: 23, percentage: 82.1 },
   { course_id: 4, course_code: '22CS3104', course_name: 'Computer Communication Networks', conducted: 26, attended: 21, percentage: 80.7 },
 ];
+export interface StandaloneLiveClass {
+  live_class_id: number;
+  course_id: number;
+  course_code: string;
+  course_name: string;
+  faculty_id: number;
+  faculty_name: string;
+  title: string;
+  description: string;
+  room_name: string;
+  start_time: string;
+  end_time: string | null;
+  status: string;
+  created_at: string;
+}
 
-const INITIAL_LIVE_CLASSES = [
+const INITIAL_LIVE_CLASSES: StandaloneLiveClass[] = [
   {
     live_class_id: 1,
     course_id: 1,
@@ -347,6 +362,40 @@ const INITIAL_GROUPS = [
       { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
       { user_id: 6, full_name: 'Rahul Varma', role: 'Member' },
     ],
+  },
+];
+
+export interface StandaloneNotification {
+  notification_id: number;
+  user_id?: number;
+  type?: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  read?: boolean;
+  created_at: string;
+}
+
+const INITIAL_NOTIFICATIONS: StandaloneNotification[] = [
+  {
+    notification_id: 1,
+    user_id: 1,
+    type: 'general',
+    title: 'End-Semester Exam Schedule Published',
+    message: 'Mid-semester exams for CS3101 have been scheduled. Check your Exam Scheduler.',
+    created_at: '2026-10-01T09:00:00Z',
+    is_read: false,
+    read: false,
+  },
+  {
+    notification_id: 2,
+    user_id: 1,
+    type: 'attendance',
+    title: '75% Attendance Advisory',
+    message: 'Your overall attendance is above 85%. You meet the end-semester criteria.',
+    created_at: '2026-09-29T10:00:00Z',
+    is_read: false,
+    read: false,
   },
 ];
 
@@ -507,5 +556,55 @@ export const standaloneDB = {
     list.unshift(newGrp);
     localStorage.setItem('educonnect_groups', JSON.stringify(list));
     return newGrp;
+  },
+
+  getNotifications: (userId?: number): StandaloneNotification[] => {
+    const all = getOrInit('notifications', INITIAL_NOTIFICATIONS);
+    if (!userId) return all;
+    return all.filter((n: any) => !n.user_id || Number(n.user_id) === Number(userId));
+  },
+
+  markNotificationRead: (id: number) => {
+    const list = standaloneDB.getNotifications();
+    const updated = list.map(n =>
+      Number(n.notification_id) === Number(id) ? { ...n, is_read: true, read: true } : n
+    );
+    localStorage.setItem('educonnect_notifications', JSON.stringify(updated));
+    return true;
+  },
+
+  markAllNotificationsRead: (userId?: number) => {
+    const list = standaloneDB.getNotifications();
+    const updated = list.map(n => {
+      if (!userId || Number(n.user_id) === Number(userId) || !n.user_id) {
+        return { ...n, is_read: true, read: true };
+      }
+      return n;
+    });
+    localStorage.setItem('educonnect_notifications', JSON.stringify(updated));
+    return true;
+  },
+
+  deleteNotification: (id: number) => {
+    const list = standaloneDB.getNotifications();
+    const filtered = list.filter(n => Number(n.notification_id) !== Number(id));
+    localStorage.setItem('educonnect_notifications', JSON.stringify(filtered));
+    return true;
+  },
+
+  updateLiveClassStatus: (id: number, status: 'scheduled' | 'live' | 'ended') => {
+    const list = standaloneDB.getLiveClasses();
+    const idx = list.findIndex((c: any) => Number(c.live_class_id) === Number(id));
+    if (idx >= 0) {
+      list[idx] = {
+        ...list[idx],
+        status,
+        ...(status === 'live' ? { start_time: new Date().toISOString() } : {}),
+        ...(status === 'ended' ? { end_time: new Date().toISOString() } : {}),
+      };
+      localStorage.setItem('educonnect_live_classes', JSON.stringify(list));
+      return list[idx];
+    }
+    return null;
   },
 };

@@ -7,7 +7,7 @@
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm --prefix backend run dev\" \"vite\"",
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix backend run dev",
-    "build": "vite build && cp -r dist/assets . && cp dist/index.html . && cp public/favicon.svg . && touch .nojekyll",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"

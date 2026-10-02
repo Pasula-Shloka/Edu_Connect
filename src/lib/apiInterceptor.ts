@@ -73,17 +73,18 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   // 1. AUTHENTICATION & SESSIONS
   if (path.includes('/api/auth/signin') && method === 'POST') {
     const email = (body.email || '').trim().toLowerCase();
-    const role: 'student' | 'faculty' | 'admin' = email.endsWith('@admin.edu.in')
-      ? 'admin'
-      : email.endsWith('@faculty.edu.in')
-      ? 'faculty'
-      : 'student';
-
     const users = standaloneDB.getUsers();
     let matchedUser = users.find(u => u.email.toLowerCase() === email);
 
     if (!matchedUser) {
-      // Auto-create recognized institutional user
+      // Auto-detect institutional role based on email identifier
+      const role: 'student' | 'faculty' | 'admin' =
+        email.includes('admin') || email.endsWith('@admin.edu.in')
+          ? 'admin'
+          : email.includes('faculty') || email.includes('prof') || email.includes('teacher') || email.endsWith('@faculty.edu.in')
+          ? 'faculty'
+          : 'student';
+
       const nameFromEmail = email.split('@')[0].replace(/[._]/g, ' ');
       const formattedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
       matchedUser = standaloneDB.saveUser({
@@ -200,6 +201,30 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     return jsonResponse(students);
   }
 
+  // 2b. FACULTY STUDENT ROSTER
+  if (path.includes('/api/faculty/students')) {
+    const students = standaloneDB.getUsers().filter(u => u.role === 'student');
+    const enriched = students.map((s, idx) => ({
+      user_id: s.user_id,
+      full_name: s.full_name,
+      email: s.email,
+      roll_number: s.roll_number || `22000300${idx + 1}`,
+      department: s.department || 'Computer Science & Engineering',
+      year: s.year || '3rd Year',
+      section: s.section || (idx % 2 === 0 ? 'Section A' : 'Section B'),
+      status: (s.status?.toLowerCase() === 'active' ? 'active' : 'active') as 'active' | 'inactive',
+      course_id: 1,
+      course_code: '22CS3101',
+      course_name: 'Database Management Systems',
+      enrolled_courses_count: 4,
+      submissions_count: 5,
+      avg_assignment_score: 84.5 + (idx % 10),
+      attendance_present_count: 18 + (idx % 5),
+      attendance_total_count: 22,
+    }));
+    return jsonResponse(enriched);
+  }
+
   if (path.includes('/api/admin/faculty')) {
     if (method === 'POST') {
       const newFaculty = standaloneDB.saveUser({
@@ -279,6 +304,18 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   }
 
   if (path.includes('/api/live-classes')) {
+    if (path.includes('/start') && method === 'PUT') {
+      const matchId = path.match(/\/api\/live-classes\/(\d+)\/start/);
+      const classId = matchId ? Number(matchId[1]) : 0;
+      const updated = standaloneDB.updateLiveClassStatus(classId, 'live');
+      return jsonResponse({ message: 'Live class started', liveClass: updated });
+    }
+    if (path.includes('/end') && method === 'PUT') {
+      const matchId = path.match(/\/api\/live-classes\/(\d+)\/end/);
+      const classId = matchId ? Number(matchId[1]) : 0;
+      const updated = standaloneDB.updateLiveClassStatus(classId, 'ended');
+      return jsonResponse({ message: 'Live class ended', liveClass: updated });
+    }
     if (method === 'POST') {
       const created = standaloneDB.saveLiveClass(body);
       return jsonResponse(created);
@@ -366,22 +403,33 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
 
   // 10. NOTIFICATIONS
   if (path.includes('/api/notifications')) {
-    return jsonResponse([
-      {
-        notification_id: 1,
-        title: 'End-Semester Exam Schedule Published',
-        message: 'Mid-semester exams for CS3101 have been scheduled. Check your Exam Scheduler.',
-        created_at: '2026-10-01T09:00:00Z',
-        read: false,
-      },
-      {
-        notification_id: 2,
-        title: '75% Attendance Advisory',
-        message: 'Your overall attendance is above 85%. You meet the end-semester criteria.',
-        created_at: '2026-09-29T10:00:00Z',
-        read: false,
-      },
-    ]);
+    if (method === 'DELETE') {
+      const matchId = path.match(/\/api\/notifications\/(\d+)/);
+      if (matchId) {
+        standaloneDB.deleteNotification(Number(matchId[1]));
+      }
+      return jsonResponse({ message: 'Notification deleted successfully' });
+    }
+
+    if (method === 'PUT' && path.includes('/read-all')) {
+      const matchUser = path.match(/\/api\/notifications\/user\/(\d+)\/read-all/);
+      const uid = matchUser ? Number(matchUser[1]) : undefined;
+      standaloneDB.markAllNotificationsRead(uid);
+      return jsonResponse({ message: 'All notifications marked as read' });
+    }
+
+    if (method === 'PUT' && path.includes('/read')) {
+      const matchId = path.match(/\/api\/notifications\/(\d+)\/read/);
+      if (matchId) {
+        standaloneDB.markNotificationRead(Number(matchId[1]));
+      }
+      return jsonResponse({ message: 'Notification marked as read' });
+    }
+
+    const matchUser = path.match(/\/api\/notifications\/(\d+)/);
+    const userId = matchUser ? Number(matchUser[1]) : undefined;
+    const notifs = standaloneDB.getNotifications(userId);
+    return jsonResponse(notifs);
   }
 
   // 11. ACADEMIC AI ASSISTANT CHAT

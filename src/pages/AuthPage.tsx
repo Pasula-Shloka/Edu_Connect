@@ -29,14 +29,6 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Expected domain map
-  const domainMap = {
-    student: '@klh.edu.in',
-    faculty: '@faculty.edu.in',
-    admin: '@admin.edu.in',
-  };
-
-  const currentDomain = domainMap[role];
 
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,18 +36,8 @@ export default function AuthPage() {
     setError(null);
 
     const cleanEmail = email.trim().toLowerCase();
-
-    // Enforce email domain matching
-    if (role === 'student' && !cleanEmail.endsWith('@klh.edu.in')) {
-      setError('Student accounts must use a valid institutional email ending with @klh.edu.in');
-      return;
-    }
-    if (role === 'faculty' && !cleanEmail.endsWith('@faculty.edu.in')) {
-      setError('Faculty accounts must use a verified email ending with @faculty.edu.in');
-      return;
-    }
-    if (role === 'admin' && !cleanEmail.endsWith('@admin.edu.in')) {
-      setError('Administrator accounts must use an authorized email ending with @admin.edu.in');
+    if (!cleanEmail || !password) {
+      setError('Please provide both email and password.');
       return;
     }
 
@@ -175,49 +157,45 @@ export default function AuthPage() {
               {mode === 'signin' ? 'Sign in to your account' : 'Register for institutional access'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Select your university role and authenticate with your institutional ID.
+              {mode === 'signin'
+                ? 'Sign in with your email and password. Your dashboard will open automatically according to your role.'
+                : 'Select your role and create your institutional credentials.'}
             </p>
           </div>
 
-          {/* Role Selector Tabs */}
-          <div className="mb-5">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Select Your Role
-            </label>
-            <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              {(
-                [
-                  { key: 'student', label: 'Student' },
-                  { key: 'faculty', label: 'Faculty' },
-                  { key: 'admin', label: 'Admin' },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => {
-                    setRole(tab.key);
-                    setError(null);
-                  }}
-                  className={`py-2 text-xs font-semibold rounded-lg transition-all ${
-                    role === tab.key
-                      ? 'bg-white dark:bg-slate-800 text-red-700 dark:text-red-400 shadow-sm border border-slate-200 dark:border-slate-700'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+          {/* Role Selector Tabs - ONLY for Registration */}
+          {mode === 'signup' && (
+            <div className="mb-5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Register As
+              </label>
+              <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                {(
+                  [
+                    { key: 'student', label: 'Student' },
+                    { key: 'faculty', label: 'Faculty' },
+                    { key: 'admin', label: 'Admin' },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setRole(tab.key);
+                      setError(null);
+                    }}
+                    className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+                      role === tab.key
+                        ? 'bg-white dark:bg-slate-800 text-red-700 dark:text-red-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
-
-            {/* Email Domain Guideline Pill */}
-            <div className="mt-2.5 flex items-center justify-between text-xs px-1">
-              <span className="text-slate-500 dark:text-slate-400">Required Domain:</span>
-              <span className="font-mono font-bold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded border border-red-200 dark:border-red-900/50">
-                name{currentDomain}
-              </span>
-            </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
@@ -251,7 +229,9 @@ export default function AuthPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={
-                    role === 'student'
+                    mode === 'signin'
+                      ? 'name@klh.edu.in or your email'
+                      : role === 'student'
                       ? 'name@klh.edu.in'
                       : role === 'faculty'
                       ? 'name@faculty.edu.in'

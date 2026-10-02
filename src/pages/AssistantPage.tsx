@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { generateAcademicAiResponse } from '@/lib/academicAiClient';
 import {
   Bot,
   Send,
@@ -134,14 +135,15 @@ export default function AssistantPage() {
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      console.error('AI error:', err);
-      const errorMsg: ChatMessage = {
+      console.warn('Backend AI error, switching to academic knowledge engine:', err);
+      const fallbackReply = generateAcademicAiResponse(userMessage, { user_id: userId });
+      const assistantMsg: ChatMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content:
-          'Unable to reach AI assistant. Please ensure backend server on port 5001 is running.',
+        content: fallbackReply,
+        created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, assistantMsg]);
     } finally {
       setSending(false);
     }

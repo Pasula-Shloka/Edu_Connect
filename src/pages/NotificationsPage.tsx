@@ -63,7 +63,13 @@ export default function NotificationsPage() {
       }
 
       const data = await response.json();
-      setNotifications(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data)
+        ? data.map((n: any) => ({
+            ...n,
+            is_read: Boolean(n.is_read ?? n.read),
+          }))
+        : [];
+      setNotifications(list);
     } catch (error) {
       console.error('Notifications fetch error:', error);
       setNotifications([]);

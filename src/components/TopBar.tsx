@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Bell,
   Search,
@@ -6,14 +5,6 @@ import {
   Sun,
   Moon,
   Bot,
-  KeyRound,
-  Copy,
-  Check,
-  ExternalLink,
-  ShieldCheck,
-  Cpu,
-  Server,
-  X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -110,17 +101,8 @@ export default function TopBar({
   onMenuClick,
   onNavigate,
 }: TopBarProps) {
-  const { profile, jwtToken } = useAuth();
+  const { profile } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [showJwtModal, setShowJwtModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  function copyJwt() {
-    if (!jwtToken) return;
-    navigator.clipboard.writeText(jwtToken);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   const pageInfo =
     pageTitles[page] || {
@@ -202,18 +184,6 @@ export default function TopBar({
           )}
         </button>
 
-        {/* JWT & Microservices Inspector Button */}
-        <button
-          type="button"
-          onClick={() => setShowJwtModal(true)}
-          className="flex h-9 items-center gap-1.5 px-2.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 shadow-sm transition hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-semibold"
-          title="Inspect active JWT Token & Python Microservices (FastAPI / Flask)"
-          aria-label="JWT & Microservices"
-        >
-          <KeyRound className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-          <span className="hidden sm:inline">JWT & APIs</span>
-        </button>
-
         {/* AI Assistant Quick Button */}
         <button
           type="button"
@@ -254,161 +224,6 @@ export default function TopBar({
           </div>
         </div>
       </div>
-
-      {/* JWT & Microservices Modal */}
-      {showJwtModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60">
-                  <KeyRound className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                    Authentication & Microservices Architecture
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Live JWT token verification, FastAPI AI endpoints, and Flask report services.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowJwtModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Section 1: Active JWT Token */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
-                    Active Signed JWT Token (Bearer)
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={copyJwt}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copied ? 'Copied!' : 'Copy Token'}</span>
-                  </button>
-                  <a
-                    href="https://jwt.io"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 text-[11px] font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition"
-                  >
-                    <span>Inspect on jwt.io</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Token String Box */}
-              <div className="p-3 rounded-xl bg-slate-950 text-slate-300 font-mono text-[11px] break-all border border-slate-800 max-h-24 overflow-y-auto select-all leading-relaxed">
-                {jwtToken || 'No active JWT token found. Sign in to generate.'}
-              </div>
-
-              {/* Decoded Claims Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                  <span className="block text-[10px] text-slate-400">Algorithm</span>
-                  <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">HS256 (HMAC)</span>
-                </div>
-                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                  <span className="block text-[10px] text-slate-400">Subject / User ID</span>
-                  <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">{profile?.id || '1'}</span>
-                </div>
-                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                  <span className="block text-[10px] text-slate-400">Role Claim</span>
-                  <span className="font-semibold capitalize text-emerald-600 dark:text-emerald-400 font-mono">{profile?.role || 'student'}</span>
-                </div>
-                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-                  <span className="block text-[10px] text-slate-400">Expiration</span>
-                  <span className="font-semibold font-mono text-slate-800 dark:text-slate-200">7 Days</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Microservices Overview */}
-            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
-                Configured Backend Microservices
-              </span>
-
-              <div className="space-y-2.5">
-                {/* FastAPI Card */}
-                <div className="flex items-start justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 mt-0.5">
-                      <Cpu className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">FastAPI Microservice</h4>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">Port 8000</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Powers Academic AI reasoning, code execution sandbox, and live Swagger API docs.
-                      </p>
-                    </div>
-                  </div>
-                  <a
-                    href="http://localhost:8000/docs"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition shrink-0 ml-2"
-                  >
-                    <span>Swagger /docs</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-
-                {/* Flask Card */}
-                <div className="flex items-start justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/60 mt-0.5">
-                      <Server className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">Flask Microservice</h4>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300">Port 5002</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Powers student grade transcripts and UGC 75% attendance audit calculations.
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300 shrink-0 ml-2">
-                    POST /api/reports/*
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-2 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowJwtModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold hover:opacity-90 transition"
-              >
-                Close Inspector
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

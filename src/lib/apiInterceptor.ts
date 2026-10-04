@@ -513,20 +513,85 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     return jsonResponse(standaloneDB.getDiscussions());
   }
 
-  // 8. STUDY GROUPS
+  // 8. STUDY GROUPS & COLLABORATIVE WORKSPACES
   if (path.includes('/api/groups')) {
+    // 8a. Kanban Tasks: /api/groups/:id/tasks
+    const matchTaskStage = path.match(/\/api\/groups\/(\d+)\/tasks\/(\d+)\/stage/);
+    if (matchTaskStage && (method === 'PUT' || method === 'PATCH')) {
+      const taskId = Number(matchTaskStage[2]);
+      const res = standaloneDB.updateGroupTaskStage(taskId, body.stage);
+      return jsonResponse(res);
+    }
+
+    const matchTasks = path.match(/\/api\/groups\/(\d+)\/tasks/);
+    if (matchTasks) {
+      const groupId = Number(matchTasks[1]);
+      if (method === 'POST') {
+        const created = standaloneDB.saveGroupTask({ ...body, group_id: groupId });
+        return jsonResponse(created);
+      }
+      return jsonResponse(standaloneDB.getGroupTasks(groupId));
+    }
+
+    // 8b. Collaborative Scratchpad: /api/groups/:id/scratchpad
+    const matchScratch = path.match(/\/api\/groups\/(\d+)\/scratchpad/);
+    if (matchScratch) {
+      const groupId = Number(matchScratch[1]);
+      if (method === 'POST') {
+        const saved = standaloneDB.saveGroupScratchpad(groupId, body.code, body.language, body.user_name);
+        return jsonResponse(saved);
+      }
+      return jsonResponse(standaloneDB.getGroupScratchpad(groupId));
+    }
+
+    // 8c. Members list: /api/groups/:id/members
     if (path.includes('/members')) {
       return jsonResponse([
-        { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
-        { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
-        { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
+        { group_member_id: 1, user_id: 1, full_name: 'Shloka Reddy', email: 'shloka@klh.edu.in', role: 'Team Lead' },
+        { group_member_id: 2, user_id: 5, full_name: 'Ananya Sharma', email: 'ananya@klh.edu.in', role: 'Core Contributor' },
+        { group_member_id: 3, user_id: 7, full_name: 'Rahul Varma', email: 'rahul@klh.edu.in', role: 'Research Associate' },
       ]);
     }
+
+    // 8d. Contributions: /api/groups/:id/contributions
     if (path.includes('/contributions')) {
-      return jsonResponse([
-        { contribution_id: 1, user_id: 1, user_name: 'Shloka Reddy', type: 'task', description: 'Drafted ER diagram for hospital scenario', points: 3, created_at: '2026-09-29T10:00:00Z' },
-      ]);
+      const matchGroup = path.match(/\/api\/groups\/(\d+)\/contributions/);
+      const groupId = matchGroup ? Number(matchGroup[1]) : 1;
+      const key = `group_contributions_${groupId}`;
+      
+      if (method === 'POST') {
+        const existing: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+        const pointsMap: Record<string, number> = { task: 3, research: 5, file: 1, meeting: 2, comment: 1 };
+        const newContrib = {
+          contribution_id: Date.now(),
+          group_id: groupId,
+          user_id: Number(body.user_id || 1),
+          contribution_type: body.contribution_type || 'task',
+          description: body.description || '',
+          points: pointsMap[body.contribution_type] || 3,
+          created_at: new Date().toISOString(),
+          full_name: body.full_name || 'Shloka Reddy',
+        };
+        existing.unshift(newContrib);
+        localStorage.setItem(key, JSON.stringify(existing));
+        return jsonResponse(newContrib);
+      }
+
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        return jsonResponse(JSON.parse(cached));
+      }
+
+      const defaults = [
+        { contribution_id: 1, group_id: groupId, user_id: 1, full_name: 'Shloka Reddy', contribution_type: 'research', description: 'Drafted complete ER schema & verified minimal cover functional dependencies', points: 5, created_at: '2026-09-29T10:00:00Z' },
+        { contribution_id: 2, group_id: groupId, user_id: 5, full_name: 'Ananya Sharma', contribution_type: 'task', description: 'Implemented BCNF decomposition validator in Python algorithm', points: 3, created_at: '2026-09-30T14:30:00Z' },
+        { contribution_id: 3, group_id: groupId, user_id: 7, full_name: 'Rahul Varma', contribution_type: 'file', description: 'Uploaded Hospital Patient Database benchmark dataset & DDL queries', points: 1, created_at: '2026-10-01T11:15:00Z' },
+        { contribution_id: 4, group_id: groupId, user_id: 1, full_name: 'Shloka Reddy', contribution_type: 'meeting', description: 'Conducted sprint review huddle on ACID transactions and rollback states', points: 2, created_at: '2026-10-02T16:00:00Z' },
+      ];
+      localStorage.setItem(key, JSON.stringify(defaults));
+      return jsonResponse(defaults);
     }
+
     if (method === 'POST') {
       const created = standaloneDB.saveGroup(body);
       return jsonResponse(created);

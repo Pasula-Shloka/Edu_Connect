@@ -783,6 +783,19 @@ export interface StandaloneGroup {
   members: Array<{ user_id: number; full_name: string; role: string }>;
 }
 
+export interface StandaloneGroupTask {
+  task_id: number;
+  group_id: number;
+  title: string;
+  description: string;
+  assigned_to_id: number;
+  assigned_to_name: string;
+  priority: 'low' | 'medium' | 'high';
+  stage: 'todo' | 'in_progress' | 'review' | 'completed';
+  due_date: string;
+  points_awarded?: boolean;
+}
+
 const INITIAL_GROUPS: StandaloneGroup[] = [
   {
     group_id: 1,
@@ -793,12 +806,115 @@ const INITIAL_GROUPS: StandaloneGroup[] = [
     course_name: 'Database Management Systems',
     course_code: '22CS3101',
     created_by: 1,
-    member_count: 5,
+    member_count: 3,
     members: [
       { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
       { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
       { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
     ],
+  },
+  {
+    group_id: 2,
+    name: 'Cloud Microservices Sprint Team',
+    group_name: 'Cloud Microservices Sprint Team',
+    description: 'Hands-on sprint group building Kubernetes YAML manifests, Docker multi-stage containers, and gRPC endpoints.',
+    course_id: 3,
+    course_name: 'Cloud Computing and Microservices',
+    course_code: '22CS3103',
+    created_by: 1,
+    member_count: 3,
+    members: [
+      { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
+      { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
+      { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
+    ],
+  },
+  {
+    group_id: 3,
+    name: 'Algorithmic Problem Solving Guild',
+    group_name: 'Algorithmic Problem Solving Guild',
+    description: 'Daily competitive coding reviews, dynamic programming patterns, and balanced tree implementations.',
+    course_id: 2,
+    course_name: 'Data Structures and Algorithms',
+    course_code: '22CS3102',
+    created_by: 1,
+    member_count: 3,
+    members: [
+      { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
+      { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
+      { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
+    ],
+  },
+];
+
+const INITIAL_GROUP_TASKS: StandaloneGroupTask[] = [
+  {
+    task_id: 1,
+    group_id: 1,
+    title: 'Design Hospital ER Diagram Entity Sets',
+    description: 'Establish primary keys, foreign relations, and cardinality ratios for Doctors, Patients, and Wards.',
+    assigned_to_id: 1,
+    assigned_to_name: 'Shloka Reddy',
+    priority: 'high',
+    stage: 'completed',
+    due_date: '2026-10-02',
+    points_awarded: true,
+  },
+  {
+    task_id: 2,
+    group_id: 1,
+    title: 'Write SQL Schema DDL with Integrity Constraints',
+    description: 'Formulate CREATE TABLE scripts with ON DELETE CASCADE and CHECK constraints in PostgreSQL.',
+    assigned_to_id: 7,
+    assigned_to_name: 'Rahul Varma',
+    priority: 'medium',
+    stage: 'completed',
+    due_date: '2026-10-03',
+    points_awarded: true,
+  },
+  {
+    task_id: 3,
+    group_id: 1,
+    title: 'Benchmark B-Tree vs Hash Index on 100K Rows',
+    description: 'Execute EXPLAIN ANALYZE queries to measure execution time differences on range queries.',
+    assigned_to_id: 5,
+    assigned_to_name: 'Ananya Sharma',
+    priority: 'high',
+    stage: 'review',
+    due_date: '2026-10-06',
+  },
+  {
+    task_id: 4,
+    group_id: 1,
+    title: 'Implement Transaction ACID Rollback Demonstrator',
+    description: 'Code Python script showing automatic ROLLBACK on bank transfer balance constraint violation.',
+    assigned_to_id: 1,
+    assigned_to_name: 'Shloka Reddy',
+    priority: 'high',
+    stage: 'in_progress',
+    due_date: '2026-10-07',
+  },
+  {
+    task_id: 5,
+    group_id: 1,
+    title: 'Normalize Patient Billing Relation to 3NF & BCNF',
+    description: 'Eliminate transitive dependencies and test lossless join decomposition property.',
+    assigned_to_id: 7,
+    assigned_to_name: 'Rahul Varma',
+    priority: 'high',
+    stage: 'todo',
+    due_date: '2026-10-09',
+  },
+  {
+    task_id: 6,
+    group_id: 1,
+    title: 'Prepare Slide Deck & Viva Talking Points',
+    description: 'Summarize system architecture and each member contribution percentage for professor evaluation.',
+    assigned_to_id: 5,
+    assigned_to_name: 'Ananya Sharma',
+    priority: 'medium',
+    stage: 'todo',
+    due_date: '2026-10-10',
   },
 ];
 
@@ -1423,6 +1539,98 @@ export const standaloneDB = {
     list.unshift(newGrp);
     localStorage.setItem('educonnect_v3_groups', JSON.stringify(list));
     return newGrp;
+  },
+
+  getGroupTasks: (groupId: number): StandaloneGroupTask[] => {
+    const all = getOrInit('group_tasks', INITIAL_GROUP_TASKS);
+    return all.filter((t: any) => Number(t.group_id) === Number(groupId));
+  },
+
+  saveGroupTask: (task: any): StandaloneGroupTask => {
+    const list = getOrInit('group_tasks', INITIAL_GROUP_TASKS);
+    const newTask: StandaloneGroupTask = {
+      task_id: Date.now(),
+      group_id: Number(task.group_id),
+      title: task.title,
+      description: task.description || '',
+      assigned_to_id: Number(task.assigned_to_id || 1),
+      assigned_to_name: task.assigned_to_name || 'Team Member',
+      priority: task.priority || 'medium',
+      stage: task.stage || 'todo',
+      due_date: task.due_date || new Date().toISOString().split('T')[0],
+      points_awarded: false,
+    };
+    list.push(newTask);
+    localStorage.setItem('educonnect_v3_group_tasks', JSON.stringify(list));
+    return newTask;
+  },
+
+  updateGroupTaskStage: (taskId: number, newStage: 'todo' | 'in_progress' | 'review' | 'completed') => {
+    const list = getOrInit('group_tasks', INITIAL_GROUP_TASKS);
+    const idx = list.findIndex((t: any) => Number(t.task_id) === Number(taskId));
+    if (idx >= 0) {
+      const task = list[idx];
+      task.stage = newStage;
+      let pointsAwarded = false;
+      if (newStage === 'completed' && !task.points_awarded) {
+        task.points_awarded = true;
+        pointsAwarded = true;
+      }
+      localStorage.setItem('educonnect_v3_group_tasks', JSON.stringify(list));
+      return { task, pointsAwarded };
+    }
+    return null;
+  },
+
+  getGroupScratchpad: (groupId: number) => {
+    const pads = getOrInit('group_scratchpads', {
+      1: {
+        language: 'python',
+        code: `# Collaborative Workspace Scratchpad
+# Course: 22CS3101 - Database Management Systems
+# Team: DBMS Research Circle
+
+def verify_bcnf(relation_attributes, functional_dependencies):
+    """
+    Checks if every functional dependency X -> Y satisfies:
+    Either Y is a subset of X (trivial) OR X is a superkey.
+    """
+    print("Verifying BCNF condition for relation:", relation_attributes)
+    superkeys = find_candidate_keys(relation_attributes, functional_dependencies)
+    
+    violating_fds = []
+    for lhs, rhs in functional_dependencies:
+        if set(rhs).issubset(set(lhs)):
+            continue # Trivial
+        if set(lhs) not in superkeys:
+            violating_fds.append((lhs, rhs))
+            
+    return len(violating_fds) == 0, violating_fds
+
+print("ACID Transaction Isolation & Normalization Checker Ready.")
+`,
+        updated_at: '2026-10-04T12:00:00Z',
+        updated_by: 'Shloka Reddy',
+      }
+    });
+    return (pads as any)[groupId] || {
+      language: 'python',
+      code: `# Collaborative Team Code Scratchpad\n# Share snippets, algorithms, and SQL schemas here.\n\ndef solution():\n    pass\n`,
+      updated_at: new Date().toISOString(),
+      updated_by: 'Team Member',
+    };
+  },
+
+  saveGroupScratchpad: (groupId: number, code: string, language: string, userName?: string) => {
+    const pads = getOrInit('group_scratchpads', {});
+    (pads as any)[groupId] = {
+      code,
+      language: language || 'python',
+      updated_at: new Date().toISOString(),
+      updated_by: userName || 'Team Member',
+    };
+    localStorage.setItem('educonnect_v3_group_scratchpads', JSON.stringify(pads));
+    return (pads as any)[groupId];
   },
 
   getNotifications: (userId?: number): StandaloneNotification[] => {

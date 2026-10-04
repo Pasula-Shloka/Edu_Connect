@@ -81,7 +81,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       const role: 'student' | 'faculty' | 'admin' =
         email.includes('admin') || email.endsWith('@admin.edu.in')
           ? 'admin'
-          : email.includes('faculty') || email.includes('prof') || email.includes('teacher') || email.endsWith('@faculty.edu.in')
+          : email.includes('faculty') || email.includes('prof') || email.includes('teacher') || email.endsWith('@faculty.edu.in') || email.includes('lalitha')
           ? 'faculty'
           : 'student';
 
@@ -115,7 +115,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     const email = (body.email || '').trim().toLowerCase();
     const role = email.endsWith('@admin.edu.in')
       ? 'admin'
-      : email.endsWith('@faculty.edu.in')
+      : email.endsWith('@faculty.edu.in') || email.includes('faculty')
       ? 'faculty'
       : 'student';
 
@@ -238,37 +238,171 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     }
 
     const faculty = standaloneDB.getUsers().filter(u => u.role === 'faculty');
-    return jsonResponse(faculty);
+    const courses = standaloneDB.getCourses();
+    const exams = standaloneDB.getExams();
+    const enriched = faculty.map(f => {
+      const facCourses = courses.filter((c: any) => Number(c.faculty_id) === Number(f.user_id));
+      const facExams = exams.filter((e: any) => Number(e.faculty_id) === Number(f.user_id));
+      return {
+        ...f,
+        status: (f.status?.toLowerCase() === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
+        courses_count: facCourses.length,
+        total_students_count: facCourses.length * 45,
+        exams_conducted_count: facExams.length,
+        assigned_courses: facCourses.map((c: any) => ({
+          course_id: c.course_id,
+          course_code: c.course_code,
+          course_name: c.course_name,
+        })),
+      };
+    });
+    return jsonResponse(enriched);
   }
 
-  // 3. COURSES
+  if (path.includes('/api/faculty/assign-course') && method === 'POST') {
+    const courseId = Number(body.course_id);
+    const facultyId = Number(body.faculty_id);
+    const courses = standaloneDB.getCourses();
+    const users = standaloneDB.getUsers();
+    const faculty = users.find(u => u.user_id === facultyId);
+    const idx = courses.findIndex((c: any) => Number(c.course_id) === courseId);
+    if (idx >= 0) {
+      courses[idx].faculty_id = facultyId;
+      if (faculty) courses[idx].faculty_name = faculty.full_name;
+      localStorage.setItem('educonnect_v3_courses', JSON.stringify(courses));
+    }
+    return jsonResponse({ message: 'Course assigned to faculty successfully' });
+  }
+
+  if (path.match(/\/api\/faculty\/(\d+)\/status/) && (method === 'PATCH' || method === 'PUT')) {
+    const matchId = path.match(/\/api\/faculty\/(\d+)\/status/);
+    if (matchId) {
+      standaloneDB.updateUser(Number(matchId[1]), { status: body.status || 'Active' });
+    }
+    return jsonResponse({ message: 'Faculty status updated' });
+  }
+
+  // 3. COURSES (Strict Faculty Scoping)
   if (path.includes('/api/courses')) {
     if (method === 'POST') {
       const created = standaloneDB.saveCourse(body);
       return jsonResponse(created);
     }
-    return jsonResponse(standaloneDB.getCourses());
+    const facultyId = url.searchParams.get('facultyId');
+    return jsonResponse(standaloneDB.getCourses(facultyId ? Number(facultyId) : undefined));
   }
 
-  // 4. EXAMS & SUBMISSIONS
+  // 4. EXAMS & SUBMISSION LIFECYCLE
   if (path.includes('/api/exams')) {
-    if (path.includes('/submit') && method === 'POST') {
-      return jsonResponse({
-        success: true,
-        message: 'Exam submitted successfully and recorded.',
-        marks_obtained: 46,
-        total_marks: 50,
-        percentage: 92,
-        grade: 'A+',
-      });
+    // 4a. Start exam attempt: POST /api/exams/:id/start
+    const matchStart = path.match(/\/api\/exams\/(\d+)\/start/);
+    if (matchStart && method === 'POST') {
+      const examId = Number(matchStart[1]);
+      const studentId = Number(body.student_id || 1);
+      const attempt = standaloneDB.startExamAttempt(examId, studentId);
+      return jsonResponse({ message: 'Exam attempt started', attempt });
     }
 
+    // 4b. Autosave individual answer: POST /api/exams/:id/autosave
+    const matchAutosave = path.match(/\/api\/exams\/(\d+)\/autosave/);
+    if (matchAutosave && method === 'POST') {
+      standaloneDB.autosaveAnswer(Number(body.attempt_id), Number(body.question_id), body.student_answer);
+      return jsonResponse({ message: 'Answer saved' });
+    }
+
+    // 4c. Submit exam: POST /api/exams/:id/submit
+    const matchSubmit = path.match(/\/api\/exams\/(\d+)\/submit/);
+    if (matchSubmit && method === 'POST') {
+      const examId = Number(matchSubmit[1]);
+      const studentId = Number(body.student_id || 1);
+      const attemptId = Number(body.attempt_id);
+      const result = standaloneDB.submitExamAttempt(examId, studentId, attemptId, body.answers || {});
+      return jsonResponse(result);
+    }
+
+    // 4d. Faculty: List submissions for exam: GET /api/exams/:id/submissions
+    const matchExamSubs = path.match(/\/api\/exams\/(\d+)\/submissions/);
+    if (matchExamSubs && method === 'GET') {
+      const examId = Number(matchExamSubs[1]);
+      return jsonResponse(standaloneDB.getExamSubmissions(examId));
+    }
+
+    // 4e. Single attempt detail: GET /api/exams/submissions/:attemptId
+    const matchSubDetail = path.match(/\/api\/exams\/submissions\/(\d+)/);
+    if (matchSubDetail && method === 'GET') {
+      const attemptId = Number(matchSubDetail[1]);
+      const detail = standaloneDB.getExamSubmissionByAttempt(attemptId);
+      if (!detail) {
+        return jsonResponse({ error: 'Submission attempt not found' }, 404);
+      }
+      return jsonResponse(detail);
+    }
+
+    // 4f. Faculty: Save evaluation: POST /api/exams/submissions/:attemptId/evaluate
+    const matchEval = path.match(/\/api\/exams\/submissions\/(\d+)\/evaluate/);
+    if (matchEval && method === 'POST') {
+      const attemptId = Number(matchEval[1]);
+      const evals = body.question_evaluations || body.evaluations || [];
+      const fb = body.overall_feedback || body.feedback || '';
+      standaloneDB.evaluateSubmission(attemptId, evals, fb);
+      return jsonResponse({ message: 'Evaluation saved successfully' });
+    }
+
+    // 4g. Publish exam: PUT /api/exams/:id/publish
+    const matchPublish = path.match(/\/api\/exams\/(\d+)\/publish/);
+    if (matchPublish && method === 'PUT') {
+      const examId = Number(matchPublish[1]);
+      const exam = standaloneDB.updateExamStatus(examId, 'scheduled', { is_published: true });
+      return jsonResponse({ message: 'Exam published', exam });
+    }
+
+    // 4h. Cancel exam: PUT /api/exams/:id/cancel
+    const matchCancel = path.match(/\/api\/exams\/(\d+)\/cancel/);
+    if (matchCancel && method === 'PUT') {
+      const examId = Number(matchCancel[1]);
+      const exam = standaloneDB.updateExamStatus(examId, 'cancelled');
+      return jsonResponse({ message: 'Exam cancelled', exam });
+    }
+
+    // 4i. Publish exam results: PUT /api/exams/:id/publish-results
+    const matchPubRes = path.match(/\/api\/exams\/(\d+)\/publish-results/);
+    if (matchPubRes && method === 'PUT') {
+      const examId = Number(matchPubRes[1]);
+      const exam = standaloneDB.updateExamStatus(examId, 'completed', { results_published: true });
+      return jsonResponse({ message: 'Exam results published to students', exam });
+    }
+
+    // 4j. Single exam details with questions: GET /api/exams/:id
+    const matchExamId = path.match(/\/api\/exams\/(\d+)$/);
+    if (matchExamId && method === 'GET') {
+      const examId = Number(matchExamId[1]);
+      const studentId = url.searchParams.get('studentId');
+      const data = standaloneDB.getExamById(examId, studentId ? Number(studentId) : undefined);
+      return jsonResponse(data);
+    }
+
+    // 4k. Edit exam: PUT /api/exams/:id
+    if (matchExamId && method === 'PUT') {
+      const examId = Number(matchExamId[1]);
+      const updated = standaloneDB.updateExam(examId, body);
+      return jsonResponse(updated);
+    }
+
+    // 4l. Create exam: POST /api/exams
     if (method === 'POST') {
       const newExam = standaloneDB.saveExam(body);
       return jsonResponse(newExam);
     }
 
-    return jsonResponse(standaloneDB.getExams());
+    // 4m. List exams: GET /api/exams
+    const facultyId = url.searchParams.get('facultyId');
+    const studentId = url.searchParams.get('studentId');
+    const role = url.searchParams.get('role');
+    return jsonResponse(standaloneDB.getExams(
+      facultyId ? Number(facultyId) : undefined,
+      studentId ? Number(studentId) : undefined,
+      role || undefined
+    ));
   }
 
   // 5. ASSIGNMENTS & ATTENDANCE
@@ -277,7 +411,14 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       const item = standaloneDB.saveAssignment(body);
       return jsonResponse(item);
     }
-    return jsonResponse(standaloneDB.getAssignments());
+    const facultyId = url.searchParams.get('facultyId');
+    const list = standaloneDB.getAssignments();
+    if (facultyId) {
+      const fId = Number(facultyId);
+      const filtered = list.filter((a: any) => Number(a.faculty_id) === fId);
+      return jsonResponse(filtered);
+    }
+    return jsonResponse(list);
   }
 
   if (path.includes('/api/submissions')) {
@@ -285,6 +426,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   }
 
   if (path.includes('/api/faculty/submissions')) {
+    const facultyId = url.searchParams.get('facultyId');
     return jsonResponse([
       {
         submission_id: 1,
@@ -295,6 +437,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
         status: 'Submitted',
         submitted_at: '2026-09-28T14:30:00Z',
         marks: 24,
+        faculty_id: facultyId ? Number(facultyId) : 3,
       },
     ]);
   }
@@ -376,7 +519,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       return jsonResponse([
         { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
         { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
-        { user_id: 6, full_name: 'Rahul Varma', role: 'Member' },
+        { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
       ]);
     }
     if (path.includes('/contributions')) {
@@ -398,6 +541,9 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       { enrollment_id: 2, course_id: 2, student_id: 1 },
       { enrollment_id: 3, course_id: 3, student_id: 1 },
       { enrollment_id: 4, course_id: 4, student_id: 1 },
+      { enrollment_id: 5, course_id: 5, student_id: 1 },
+      { enrollment_id: 6, course_id: 6, student_id: 1 },
+      { enrollment_id: 7, course_id: 7, student_id: 1 },
     ]);
   }
 

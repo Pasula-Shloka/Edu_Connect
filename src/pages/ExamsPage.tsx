@@ -245,16 +245,55 @@ export default function ExamsPage() {
     }
   }
 
+  const [quickCourseCode, setQuickCourseCode] = useState('');
+  const [quickCourseName, setQuickCourseName] = useState('');
+  const [creatingQuickCourse, setCreatingQuickCourse] = useState(false);
+
+  async function handleQuickCreateCourse() {
+    if (!quickCourseCode.trim() || !quickCourseName.trim()) {
+      alert('Please enter both course code and course name.');
+      return;
+    }
+    setCreatingQuickCourse(true);
+    try {
+      const res = await fetch(`${API_URL}/api/courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          course_code: quickCourseCode.trim().toUpperCase(),
+          course_name: quickCourseName.trim(),
+          description: 'Departmental curriculum and laboratory coursework.',
+          faculty_id: userId,
+        }),
+      });
+      if (res.ok) {
+        const newCourse = await res.json();
+        setCourses((prev) => [...prev, newCourse]);
+        setExamForm((prev) => ({ ...prev, course_id: String(newCourse.course_id) }));
+        setQuickCourseCode('');
+        setQuickCourseName('');
+      } else {
+        alert('Failed to create course.');
+      }
+    } catch (err) {
+      console.error('Error creating course:', err);
+      alert('Error creating course.');
+    } finally {
+      setCreatingQuickCourse(false);
+    }
+  }
+
   async function fetchMetadata() {
     try {
-      const coursesRes = await fetch(`${API_URL}/api/courses`);
+      const url = `${API_URL}/api/courses${role === 'faculty' ? `?facultyId=${userId}` : ''}`;
+      const coursesRes = await fetch(url);
       if (coursesRes.ok) {
         const cData = await coursesRes.json();
+        let accessible = Array.isArray(cData) ? cData : [];
         if (role === 'faculty') {
-          setCourses(cData.filter((c: any) => Number(c.faculty_id) === userId));
-        } else {
-          setCourses(cData);
+          accessible = accessible.filter((c: any) => Number(c.faculty_id) === userId);
         }
+        setCourses(accessible);
       }
 
       if (role === 'admin') {
@@ -689,11 +728,12 @@ export default function ExamsPage() {
         };
       });
 
+      const durationMinutes = Number(data.exam?.duration_minutes) || 60;
       setActiveRunnerExam(data.exam);
       setRunnerQuestions(parsedQuestions);
       setCurrentQuestionIndex(0);
       setAnswersMap({});
-      setRemainingSeconds(data.exam.duration_minutes * 60);
+      setRemainingSeconds(durationMinutes * 60);
       setExamSubmittedSuccess(null);
     } catch (err: any) {
       console.error('Failed to start exam:', err);
@@ -1743,21 +1783,61 @@ export default function ExamsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Course Selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Course / Subject *
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Course / Subject *
+                    </label>
+                    {courses.length > 0 && (
+                      <span className="text-[11px] text-slate-400">
+                        {courses.length} assigned {courses.length === 1 ? 'course' : 'courses'}
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={examForm.course_id}
                     onChange={(e) => setExamForm({ ...examForm, course_id: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-600"
                   >
-                    <option value="">Select course...</option>
+                    <option value="">{courses.length === 0 ? 'No assigned courses found' : 'Select course...'}</option>
                     {courses.map((c) => (
                       <option key={c.course_id} value={String(c.course_id)}>
                         {c.course_code} - {c.course_name}
                       </option>
                     ))}
                   </select>
+
+                  {/* Inline Quick Course Provisioning for Faculty */}
+                  {courses.length === 0 && (
+                    <div className="mt-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                      <p className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                        No courses currently linked to your faculty profile. Quick-add your subject to schedule this exam:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Code (e.g. CS301)"
+                          value={quickCourseCode}
+                          onChange={(e) => setQuickCourseCode(e.target.value)}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Subject Name (e.g. Cloud Architecture)"
+                          value={quickCourseName}
+                          onChange={(e) => setQuickCourseName(e.target.value)}
+                          className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleQuickCreateCourse}
+                        disabled={creatingQuickCourse}
+                        className="px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold shadow-sm transition-colors"
+                      >
+                        {creatingQuickCourse ? 'Adding Subject...' : '+ Quick Add Subject & Select'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Faculty Selection (Admin only) */}

@@ -149,7 +149,10 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           // 1. Faculty Courses
           const coursesRes = await fetch(`${API_URL}/api/courses?facultyId=${userId}`);
           if (coursesRes.ok) {
-            const facultyCourses: Course[] = await coursesRes.json();
+            let facultyCourses: Course[] = await coursesRes.json();
+            if (Array.isArray(facultyCourses)) {
+              facultyCourses = facultyCourses.filter((c: any) => Number(c.faculty_id) === userId);
+            }
             setCourses(facultyCourses);
           }
 

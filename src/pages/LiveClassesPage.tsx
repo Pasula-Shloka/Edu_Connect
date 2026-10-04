@@ -100,20 +100,16 @@ export default function LiveClassesPage() {
 
   async function fetchCourses() {
     try {
-      let res = await fetch(`${API_URL}/api/courses?facultyId=${userId}`);
+      const isFaculty = profile?.role === 'faculty';
+      const url = `${API_URL}/api/courses${isFaculty ? `?facultyId=${userId}` : ''}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setCourses(data);
-          return;
+        let accessible = Array.isArray(data) ? data : [];
+        if (isFaculty) {
+          accessible = accessible.filter((c: any) => Number(c.faculty_id) === userId);
         }
-      }
-
-      // Fallback: fetch all university courses
-      const allRes = await fetch(`${API_URL}/api/courses`);
-      if (allRes.ok) {
-        const allData = await allRes.json();
-        setCourses(Array.isArray(allData) ? allData : []);
+        setCourses(accessible);
       }
     } catch (err) {
       console.error('Courses loading error:', err);

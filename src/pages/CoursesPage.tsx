@@ -67,10 +67,11 @@ export default function CoursesPage() {
       setLoading(true);
       setError('');
 
+      const fId = Number(profile?.user_id || profile?.id);
       let url = `${API_URL}/api/courses`;
 
-      if (profile?.role === 'faculty' && profile.user_id) {
-        url = `${API_URL}/api/courses?facultyId=${profile.user_id}`;
+      if (profile?.role === 'faculty' && fId) {
+        url = `${API_URL}/api/courses?facultyId=${fId}`;
       }
 
       const response = await fetch(url);
@@ -80,8 +81,12 @@ export default function CoursesPage() {
       }
 
       const data = await response.json();
+      let list = Array.isArray(data) ? data : [];
+      if (profile?.role === 'faculty' && fId) {
+        list = list.filter((c: any) => Number(c.faculty_id) === fId);
+      }
 
-      setCourses(Array.isArray(data) ? data : []);
+      setCourses(list);
     } catch (err) {
       console.error('Courses fetch error:', err);
       setError('Unable to load courses');
@@ -215,7 +220,7 @@ export default function CoursesPage() {
           course_code: courseCode.trim(),
           course_name: courseName.trim(),
           description: courseDescription.trim(),
-          faculty_id: Number(profile.user_id),
+          faculty_id: Number(profile.user_id || profile.id),
         }),
       });
 

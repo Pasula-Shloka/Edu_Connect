@@ -105,12 +105,13 @@ export default function AttendancePage() {
   async function fetchCourses() {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/courses`);
+      const url = `${API_URL}/api/courses${role === 'faculty' ? `?facultyId=${userId}` : ''}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        let accessible = data;
+        let accessible = Array.isArray(data) ? data : [];
         if (role === 'faculty') {
-          accessible = data.filter((c: Course) => Number(c.faculty_id) === userId);
+          accessible = accessible.filter((c: Course) => Number(c.faculty_id) === userId);
         }
         setCourses(accessible);
         if (accessible.length > 0) {

@@ -121,16 +121,19 @@ export default function AssignmentsPage() {
     }
   }, [profile]);
 
+  const API_URL = 'http://localhost:5001';
+
   /* =========================================================
      COURSES
   ========================================================= */
 
   async function fetchCourses() {
     try {
-      let url = 'http://localhost:5001/api/courses';
+      const fId = Number(profile?.user_id || profile?.id);
+      let url = `${API_URL}/api/courses`;
 
-      if (profile?.role === 'faculty' && profile.user_id) {
-        url = `http://localhost:5001/api/courses?facultyId=${profile.user_id}`;
+      if (profile?.role === 'faculty' && fId) {
+        url = `${API_URL}/api/courses?facultyId=${fId}`;
       }
 
       const response = await fetch(url);
@@ -139,7 +142,12 @@ export default function AssignmentsPage() {
         throw new Error('Failed to fetch courses');
       }
 
-      const data: Course[] = await response.json();
+      let data: Course[] = await response.json();
+      if (profile?.role === 'faculty' && fId) {
+        data = (Array.isArray(data) ? data : []).filter(c => Number(c.faculty_id) === fId);
+      } else {
+        data = Array.isArray(data) ? data : [];
+      }
 
       setCourses(data);
 
@@ -163,10 +171,11 @@ export default function AssignmentsPage() {
     try {
       setLoading(true);
 
-      let url = 'http://localhost:5001/api/assignments';
+      const fId = Number(profile?.user_id || profile?.id);
+      let url = `${API_URL}/api/assignments`;
 
-      if (profile?.role === 'faculty' && profile.user_id) {
-        url = `http://localhost:5001/api/assignments?facultyId=${profile.user_id}`;
+      if (profile?.role === 'faculty' && fId) {
+        url = `${API_URL}/api/assignments?facultyId=${fId}`;
       }
 
       const response = await fetch(url);
@@ -179,9 +188,12 @@ export default function AssignmentsPage() {
         );
       }
 
-      const data = await response.json();
+      let data = await response.json();
+      if (profile?.role === 'faculty' && fId && Array.isArray(data)) {
+        data = data.filter((a: any) => Number(a.faculty_id) === fId || courses.some(c => c.course_id === a.course_id));
+      }
 
-      setAssignments(data);
+      setAssignments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Unable to load assignments:', error);
       setAssignments([]);

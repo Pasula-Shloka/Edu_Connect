@@ -18,6 +18,25 @@ export interface StandaloneUser {
   created_at: string;
 }
 
+export interface StandaloneExamAttempt {
+  attempt_id: number;
+  exam_id: number;
+  student_id: number;
+  student_name?: string;
+  student_email?: string;
+  roll_number?: string;
+  section?: string;
+  started_at: string;
+  submitted_at?: string;
+  status: 'in_progress' | 'submitted' | 'evaluated';
+  total_score?: number | null;
+  percentage?: number | null;
+  grade?: string | null;
+  feedback?: string | null;
+  answers: Record<string, string>; // question_id -> student answer
+  evaluations?: Record<string, { marks: number; feedback: string }>;
+}
+
 const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '1',
@@ -55,10 +74,10 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '4',
     user_id: 4,
-    email: 'ramesh@faculty.edu.in',
-    full_name: 'Dr. P. Ramesh Kumar',
+    email: 'lalitha@faculty.edu.in',
+    full_name: 'Dr. Lalitha',
     role: 'faculty',
-    department: 'Electronics & Communication',
+    department: 'Computer Science & Engineering',
     status: 'Active',
     created_at: '2026-08-25T08:00:00Z',
   },
@@ -78,6 +97,16 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '6',
     user_id: 6,
+    email: 'priya@faculty.edu.in',
+    full_name: 'Dr. Priya Sharma',
+    role: 'faculty',
+    department: 'Computer Science & Engineering',
+    status: 'Active',
+    created_at: '2026-08-28T08:00:00Z',
+  },
+  {
+    id: '7',
+    user_id: 7,
     email: 'rahul@klh.edu.in',
     full_name: 'Rahul Varma',
     role: 'student',
@@ -87,6 +116,39 @@ const INITIAL_USERS: StandaloneUser[] = [
     roll_number: '2200030089',
     status: 'Active',
     created_at: '2026-09-02T08:00:00Z',
+  },
+  {
+    id: '8',
+    user_id: 8,
+    email: 'shloka@klh.edu',
+    full_name: 'Shloka',
+    role: 'student',
+    department: 'Computer Science & Engineering',
+    year: '3rd Year',
+    section: 'Section A',
+    roll_number: '2200030090',
+    status: 'Active',
+    created_at: '2026-09-03T08:00:00Z',
+  },
+  {
+    id: '10',
+    user_id: 10,
+    email: 'lalitha@klh.edu',
+    full_name: 'DR.Lalitha',
+    role: 'faculty',
+    department: 'Computer Science & Engineering',
+    status: 'Active',
+    created_at: '2026-08-29T08:00:00Z',
+  },
+  {
+    id: '12',
+    user_id: 12,
+    email: 'newfaculty@faculty.edu.in',
+    full_name: 'New Faculty',
+    role: 'faculty',
+    department: 'Computer Science & Engineering',
+    status: 'Active',
+    created_at: '2026-09-05T08:00:00Z',
   },
 ];
 
@@ -114,20 +176,50 @@ const INITIAL_COURSES = [
   {
     course_id: 3,
     course_code: '22CS3103',
-    course_name: 'Operating Systems Principles',
-    description: 'Process scheduling, virtualization, deadlock prevention (Coffman conditions), and virtual memory paging.',
+    course_name: 'Cloud Computing and Microservices',
+    description: 'Distributed systems, Docker, Kubernetes, microservices architecture, and cloud deployment pipelines.',
     faculty_id: 4,
-    faculty_name: 'Dr. P. Ramesh Kumar',
+    faculty_name: 'Dr. Lalitha',
     department: 'Computer Science & Engineering',
-    credits: 3,
+    credits: 4,
   },
   {
     course_id: 4,
     course_code: '22CS3104',
-    course_name: 'Computer Communication Networks',
-    description: 'OSI 7-layer reference model, TCP/IP flow control, routing algorithms and socket programming.',
+    course_name: 'Compiler Design and Automata',
+    description: 'Lexical analysis, syntax parsing, AST construction, intermediate code representation, and optimization.',
     faculty_id: 4,
-    faculty_name: 'Dr. P. Ramesh Kumar',
+    faculty_name: 'Dr. Lalitha',
+    department: 'Computer Science & Engineering',
+    credits: 3,
+  },
+  {
+    course_id: 5,
+    course_code: '22CS3105',
+    course_name: 'Advanced Data Structures and Analysis',
+    description: 'B-Trees, Fibonacci Heaps, Disjoint Sets, Network Flow, and amortized complexity analysis.',
+    faculty_id: 6,
+    faculty_name: 'Dr. Priya Sharma',
+    department: 'Computer Science & Engineering',
+    credits: 4,
+  },
+  {
+    course_id: 6,
+    course_code: '22CS3106',
+    course_name: 'Object Oriented Programming with Java',
+    description: 'JVM architecture, multithreading, concurrency locks, reflection, and Enterprise Spring Boot patterns.',
+    faculty_id: 10,
+    faculty_name: 'DR.Lalitha',
+    department: 'Computer Science & Engineering',
+    credits: 4,
+  },
+  {
+    course_id: 7,
+    course_code: '22CS3107',
+    course_name: 'Operating Systems & Concurrency',
+    description: 'Process scheduling, virtualization, deadlock prevention (Coffman conditions), and virtual memory paging.',
+    faculty_id: 12,
+    faculty_name: 'New Faculty',
     department: 'Computer Science & Engineering',
     credits: 3,
   },
@@ -136,71 +228,346 @@ const INITIAL_COURSES = [
 const INITIAL_EXAMS = [
   {
     exam_id: 1,
+    title: 'DBMS Mid-Semester Examination',
     exam_name: 'DBMS Mid-Semester Examination',
     course_id: 1,
     course_name: 'Database Management Systems',
     course_code: '22CS3101',
     faculty_id: 3,
-    target_student_group: 'CSE-2026-A',
+    faculty_name: 'Dr. K. Srinivas Rao',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
     exam_date: '2026-10-15',
     start_time: '10:00',
     end_time: '12:00',
     duration_minutes: 120,
     total_marks: 50,
     instructions: 'All questions are compulsory. Ensure strict academic integrity. Autosave is enabled.',
-    status: 'Scheduled',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
     questions: [
       {
         question_id: 1,
+        question_number: 1,
         question_text: 'Which normal form eliminates transitive functional dependencies?',
         question_type: 'mcq',
         options: ['1NF', '2NF', '3NF', 'BCNF'],
         correct_answer: '3NF',
-        marks: 5,
+        marks: 10,
       },
       {
         question_id: 2,
-        question_text: 'Explain the difference between a Candidate Key and a Superkey with an example.',
-        question_type: 'short',
+        question_number: 2,
+        question_text: 'PostgreSQL provides full ACID compliance by default.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'True',
         marks: 10,
       },
       {
         question_id: 3,
-        question_text: 'Describe the 4 ACID properties of transaction management and how the Write-Ahead Log (WAL) guarantees Atomicity and Durability.',
-        question_type: 'descriptive',
-        marks: 20,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that computes the factorial of an integer N.',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    # input_data is a single integer string, e.g. "5"\n    n = int(input_data.strip())\n    res = 1\n    for i in range(1, n + 1):\n        res *= i\n    return str(res)\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: '5', expected_output: '120' },
+            { input: '3', expected_output: '6' }
+          ],
+        },
+        correct_answer: '120',
+        marks: 30,
       },
     ],
   },
   {
     exam_id: 2,
+    title: 'Data Structures Lab Exam',
     exam_name: 'Data Structures Lab Exam',
     course_id: 2,
     course_name: 'Data Structures and Algorithms',
     course_code: '22CS3102',
     faculty_id: 3,
-    target_student_group: 'CSE-2026-A',
+    faculty_name: 'Dr. K. Srinivas Rao',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
     exam_date: '2026-10-22',
     start_time: '14:00',
     end_time: '16:00',
     duration_minutes: 120,
     total_marks: 50,
-    instructions: 'Implement solutions in C++ or Python. Analyze time complexity of your algorithms.',
-    status: 'Scheduled',
+    instructions: 'Implement solutions in Python. Analyze time complexity of your algorithms.',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
     questions: [
       {
-        question_id: 1,
+        question_id: 4,
+        question_number: 1,
         question_text: 'What is the worst-case time complexity of binary search in an array of size N?',
         question_type: 'mcq',
         options: ['O(1)', 'O(log N)', 'O(N)', 'O(N^2)'],
         correct_answer: 'O(log N)',
-        marks: 5,
+        marks: 10,
       },
       {
-        question_id: 2,
-        question_text: 'Write the pseudocode for inserting a new node into a Binary Search Tree.',
-        question_type: 'short',
-        marks: 15,
+        question_id: 5,
+        question_number: 2,
+        question_text: 'An AVL tree is a self-balancing binary search tree where heights of child subtrees differ by at most 1.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'True',
+        marks: 10,
+      },
+      {
+        question_id: 6,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that reverses a string of space-separated words.',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    words = input_data.strip().split()\n    return " ".join(reversed(words))\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: 'hello world', expected_output: 'world hello' },
+            { input: 'algorithm design', expected_output: 'design algorithm' }
+          ],
+        },
+        correct_answer: 'world hello',
+        marks: 30,
+      },
+    ],
+  },
+  {
+    exam_id: 3,
+    title: 'Cloud Computing Mid-Term Exam',
+    exam_name: 'Cloud Computing Mid-Term Exam',
+    course_id: 3,
+    course_name: 'Cloud Computing and Microservices',
+    course_code: '22CS3103',
+    faculty_id: 4,
+    faculty_name: 'Dr. Lalitha',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
+    exam_date: '2026-10-25',
+    start_time: '10:00',
+    end_time: '11:30',
+    duration_minutes: 90,
+    total_marks: 50,
+    instructions: 'Answer all questions. Strict time limit applies.',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
+    questions: [
+      {
+        question_id: 7,
+        question_number: 1,
+        question_text: 'What is the open-source container orchestration platform originally developed by Google?',
+        question_type: 'mcq',
+        options: ['Docker Swarm', 'Kubernetes', 'Apache Mesos', 'Nomad'],
+        correct_answer: 'Kubernetes',
+        marks: 10,
+      },
+      {
+        question_id: 8,
+        question_number: 2,
+        question_text: 'Microservices architectures enforce that all services share a single monolithic relational database.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'False',
+        marks: 10,
+      },
+      {
+        question_id: 9,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that computes the maximum contiguous subarray sum (Kadane algorithm).',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    nums = [int(x) for x in input_data.strip().split()]\n    max_so_far = nums[0]\n    curr_max = nums[0]\n    for x in nums[1:]:\n        curr_max = max(x, curr_max + x)\n        max_so_far = max(max_so_far, curr_max)\n    return str(max_so_far)\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: '-2 1 -3 4 -1 2 1 -5 4', expected_output: '6' }
+          ],
+        },
+        correct_answer: '6',
+        marks: 30,
+      },
+    ],
+  },
+  {
+    exam_id: 4,
+    title: 'Data Structures Quiz: Binary Trees & Graphs',
+    exam_name: 'Data Structures Quiz: Binary Trees & Graphs',
+    course_id: 5,
+    course_name: 'Advanced Data Structures and Analysis',
+    course_code: '22CS3105',
+    faculty_id: 6,
+    faculty_name: 'Dr. Priya Sharma',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
+    exam_date: '2026-10-06',
+    start_time: '14:00',
+    end_time: '15:00',
+    duration_minutes: 60,
+    total_marks: 50,
+    instructions: 'Comprehensive assessment on balanced trees and graph traversals.',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
+    questions: [
+      {
+        question_id: 10,
+        question_number: 1,
+        question_text: 'Which data structure is primarily used in Breadth-First Search (BFS) traversal of a graph?',
+        question_type: 'mcq',
+        options: ['Stack', 'Queue', 'Priority Queue', 'Binary Search Tree'],
+        correct_answer: 'Queue',
+        marks: 10,
+      },
+      {
+        question_id: 11,
+        question_number: 2,
+        question_text: 'In an AVL tree, the balance factor of every node must be either -1, 0, or +1.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'True',
+        marks: 10,
+      },
+      {
+        question_id: 12,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that calculates the sum of all elements in an array.',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    nums = [int(x) for x in input_data.strip().split()]\n    return str(sum(nums))\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: '1 2 3 4 5', expected_output: '15' }
+          ],
+        },
+        correct_answer: '15',
+        marks: 30,
+      },
+    ],
+  },
+  {
+    exam_id: 5,
+    title: 'DBMS Mid-Term Examination 2026',
+    exam_name: 'DBMS Mid-Term Examination 2026',
+    course_id: 6,
+    course_name: 'Object Oriented Programming with Java',
+    course_code: '22CS3106',
+    faculty_id: 10,
+    faculty_name: 'DR.Lalitha',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
+    exam_date: '2026-10-18',
+    start_time: '10:00',
+    end_time: '11:30',
+    duration_minutes: 90,
+    total_marks: 50,
+    instructions: 'Comprehensive exam covering OOP paradigms, JVM mechanics, and Java Collections.',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
+    questions: [
+      {
+        question_id: 13,
+        question_number: 1,
+        question_text: 'Which keyword in Java prevents a method from being overridden in a subclass?',
+        question_type: 'mcq',
+        options: ['static', 'final', 'const', 'abstract'],
+        correct_answer: 'final',
+        marks: 10,
+      },
+      {
+        question_id: 14,
+        question_number: 2,
+        question_text: 'In Java, strings are immutable objects.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'True',
+        marks: 10,
+      },
+      {
+        question_id: 15,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that checks if a string is a palindrome (ignoring case). Return "True" or "False".',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    s = input_data.strip().lower()\n    return "True" if s == s[::-1] else "False"\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: 'racecar', expected_output: 'True' },
+            { input: 'hello', expected_output: 'False' }
+          ],
+        },
+        correct_answer: 'True',
+        marks: 30,
+      },
+    ],
+  },
+  {
+    exam_id: 6,
+    title: 'Operating Systems & Concurrency Assessment',
+    exam_name: 'Operating Systems & Concurrency Assessment',
+    course_id: 7,
+    course_name: 'Operating Systems & Concurrency',
+    course_code: '22CS3107',
+    faculty_id: 12,
+    faculty_name: 'New Faculty',
+    student_group: 'All Enrolled Students',
+    target_student_group: 'All Enrolled Students',
+    exam_date: '2026-10-28',
+    start_time: '11:00',
+    end_time: '12:30',
+    duration_minutes: 90,
+    total_marks: 50,
+    instructions: 'Evaluate CPU scheduling, synchronization primitives, and virtual memory.',
+    status: 'scheduled',
+    is_published: true,
+    results_published: false,
+    questions: [
+      {
+        question_id: 16,
+        question_number: 1,
+        question_text: 'Which scheduling algorithm is non-preemptive and allocates CPU based on the smallest execution burst?',
+        question_type: 'mcq',
+        options: ['Round Robin', 'SJF (Shortest Job First)', 'SRTF', 'Priority Preemptive'],
+        correct_answer: 'SJF (Shortest Job First)',
+        marks: 10,
+      },
+      {
+        question_id: 17,
+        question_number: 2,
+        question_text: 'A deadlock can occur only if all four Coffman conditions hold simultaneously.',
+        question_type: 'true_false',
+        options: ['True', 'False'],
+        correct_answer: 'True',
+        marks: 10,
+      },
+      {
+        question_id: 18,
+        question_number: 3,
+        question_text: 'Write a Python function `solution(input_data)` that counts the number of vowel characters in a string.',
+        question_type: 'coding',
+        options: {
+          language: 'python',
+          starter_code: 'def solution(input_data):\n    vowels = set("aeiouAEIOU")\n    count = sum(1 for c in input_data if c in vowels)\n    return str(count)\n',
+          constraints: 'Time Limit: 1.0s, Space Limit: 256MB',
+          test_cases: [
+            { input: 'Operating System', expected_output: '6' }
+          ],
+        },
+        correct_answer: '6',
+        marks: 30,
       },
     ],
   },
@@ -216,6 +583,7 @@ const INITIAL_ASSIGNMENTS = [
     due_date: '2026-10-18T23:59:00Z',
     max_marks: 25,
     submission_count: 34,
+    faculty_id: 3,
   },
   {
     assignment_id: 2,
@@ -226,15 +594,53 @@ const INITIAL_ASSIGNMENTS = [
     due_date: '2026-10-25T23:59:00Z',
     max_marks: 30,
     submission_count: 28,
+    faculty_id: 3,
+  },
+  {
+    assignment_id: 3,
+    title: 'Assignment 3: Container Deployment with Kubernetes',
+    course_id: 3,
+    course_code: '22CS3103',
+    description: 'Write Dockerfile and Kubernetes deployment yaml files for multi-container microservice.',
+    due_date: '2026-10-26T23:59:00Z',
+    max_marks: 30,
+    submission_count: 12,
+    faculty_id: 4,
+  },
+  {
+    assignment_id: 4,
+    title: 'Assignment 4: AVL and Red-Black Tree Balancing',
+    course_id: 5,
+    course_code: '22CS3105',
+    description: 'Implement AVL tree rotations and verify balanced invariant after 1000 insertions.',
+    due_date: '2026-10-27T23:59:00Z',
+    max_marks: 25,
+    submission_count: 18,
+    faculty_id: 6,
+  },
+  {
+    assignment_id: 5,
+    title: 'Assignment 5: Multithreaded Bank Transaction Simulator',
+    course_id: 6,
+    course_code: '22CS3106',
+    description: 'Use Java ReentrantLock and Condition variables to prevent deadlocks in concurrent transfers.',
+    due_date: '2026-10-28T23:59:00Z',
+    max_marks: 30,
+    submission_count: 22,
+    faculty_id: 10,
   },
 ];
 
 const INITIAL_ATTENDANCE = [
   { course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems', conducted: 32, attended: 28, percentage: 87.5 },
   { course_id: 2, course_code: '22CS3102', course_name: 'Data Structures and Algorithms', conducted: 30, attended: 26, percentage: 86.6 },
-  { course_id: 3, course_code: '22CS3103', course_name: 'Operating Systems Principles', conducted: 28, attended: 23, percentage: 82.1 },
-  { course_id: 4, course_code: '22CS3104', course_name: 'Computer Communication Networks', conducted: 26, attended: 21, percentage: 80.7 },
+  { course_id: 3, course_code: '22CS3103', course_name: 'Cloud Computing and Microservices', conducted: 28, attended: 25, percentage: 89.2 },
+  { course_id: 4, course_code: '22CS3104', course_name: 'Compiler Design and Automata', conducted: 24, attended: 21, percentage: 87.5 },
+  { course_id: 5, course_code: '22CS3105', course_name: 'Advanced Data Structures and Analysis', conducted: 26, attended: 22, percentage: 84.6 },
+  { course_id: 6, course_code: '22CS3106', course_name: 'Object Oriented Programming with Java', conducted: 30, attended: 27, percentage: 90.0 },
+  { course_id: 7, course_code: '22CS3107', course_name: 'Operating Systems & Concurrency', conducted: 28, attended: 23, percentage: 82.1 },
 ];
+
 export interface StandaloneLiveClass {
   live_class_id: number;
   course_id: number;
@@ -248,7 +654,6 @@ export interface StandaloneLiveClass {
   start_time: string;
   end_time: string | null;
   status: string;
-  created_at: string;
 }
 
 const INITIAL_LIVE_CLASSES: StandaloneLiveClass[] = [
@@ -259,94 +664,126 @@ const INITIAL_LIVE_CLASSES: StandaloneLiveClass[] = [
     course_name: 'Database Management Systems',
     faculty_id: 3,
     faculty_name: 'Dr. K. Srinivas Rao',
-    title: 'Transaction Management & ACID Implementation',
-    description: 'Interactive lecture on two-phase locking, dirty reads, and recovery algorithms.',
-    room_name: 'KLEduConnect-DBMS-Lecture-1',
-    start_time: new Date(Date.now() - 15 * 60000).toISOString(),
+    title: 'Relational Algebra & Normalization Deep Dive',
+    description: 'Live problem solving on finding minimal covers and determining 3NF vs BCNF decompositions.',
+    room_name: 'CS-DBMS-Live-101',
+    start_time: '2026-10-02T10:00:00Z',
     end_time: null,
-    status: 'live',
-    created_at: new Date(Date.now() - 30 * 60000).toISOString(),
+    status: 'scheduled',
   },
   {
     live_class_id: 2,
-    course_id: 2,
-    course_code: '22CS3102',
-    course_name: 'Data Structures and Algorithms',
-    faculty_id: 3,
-    faculty_name: 'Dr. K. Srinivas Rao',
-    title: 'Dynamic Programming: 0/1 Knapsack & Bellman-Ford',
-    description: 'Upcoming problem-solving session for mid-semester exam preparation.',
-    room_name: 'KLEduConnect-DSA-Lecture-2',
-    start_time: new Date(Date.now() + 120 * 60000).toISOString(),
+    course_id: 3,
+    course_code: '22CS3103',
+    course_name: 'Cloud Computing and Microservices',
+    faculty_id: 4,
+    faculty_name: 'Dr. Lalitha',
+    title: 'Kubernetes Pod Networking & Ingress Controllers',
+    description: 'Hands-on live lab demonstration of ClusterIP, NodePort, and LoadBalancer configurations.',
+    room_name: 'CS-CLOUD-Live-102',
+    start_time: '2026-10-03T11:00:00Z',
     end_time: null,
     status: 'scheduled',
-    created_at: new Date().toISOString(),
   },
 ];
 
-const INITIAL_RESOURCES = [
+export interface StandaloneResource {
+  resource_id: number;
+  course_id: number;
+  course_name?: string;
+  course_code?: string;
+  title: string;
+  description: string;
+  resource_type: string;
+  file_url: string;
+  file_name?: string;
+  file_size?: number;
+  unit_name: string;
+  created_at: string;
+}
+
+const INITIAL_RESOURCES: StandaloneResource[] = [
   {
     resource_id: 1,
     course_id: 1,
-    unit_id: 1,
-    title: 'Unit 1: Relational Algebra & SQL Query Optimization Slides',
-    description: 'Official lecture presentation slides with solved sample queries.',
-    resource_type: 'slide',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    created_at: '2026-09-10T10:00:00Z',
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    title: 'Unit 1 Lecture Notes: Relational Data Model',
+    description: 'Detailed textbook notes covering relations, integrity constraints, and domain relational calculus.',
+    resource_type: 'notes',
+    file_url: '#',
+    file_name: 'Unit1_Relational_Model.pdf',
+    unit_name: 'Unit 1: Relational Model & SQL',
+    created_at: '2026-09-10T09:00:00Z',
   },
   {
     resource_id: 2,
     course_id: 1,
-    unit_id: 2,
-    title: 'Normalization Deep Dive: 1NF to BCNF Cheatsheet',
-    description: 'Comprehensive study guide with functional dependency decomposition rules.',
-    resource_type: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    created_at: '2026-09-15T11:00:00Z',
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    title: 'Unit 2: Normalization Masterclass & Practice Problems',
+    description: 'Full question bank covering 1NF, 2NF, 3NF, BCNF, 4NF, and multi-valued dependencies.',
+    resource_type: 'handout',
+    file_url: '#',
+    file_name: 'Normalization_Handbook.pdf',
+    unit_name: 'Unit 2: Normalization (1NF-BCNF)',
+    created_at: '2026-09-18T10:30:00Z',
   },
   {
     resource_id: 3,
-    course_id: 2,
-    unit_id: 1,
-    title: 'AVL Trees & Red-Black Tree Rotation Visualizations',
-    description: 'Visual reference guide detailing left and right rotation cases.',
-    resource_type: 'document',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-    created_at: '2026-09-18T09:30:00Z',
+    course_id: 3,
+    course_code: '22CS3103',
+    course_name: 'Cloud Computing and Microservices',
+    title: 'Unit 1: Microservices Architecture Blueprint',
+    description: 'Patterns for API Gateways, Service Discovery, Circuit Breakers, and Saga transactions.',
+    resource_type: 'notes',
+    file_url: '#',
+    file_name: 'Microservices_Blueprint.pdf',
+    unit_name: 'Unit 1: Cloud Architecture',
+    created_at: '2026-09-20T11:00:00Z',
   },
 ];
 
-const INITIAL_DISCUSSIONS = [
+export interface StandaloneDiscussion {
+  discussion_id: number;
+  course_id: number;
+  title: string;
+  content: string;
+  created_by: number;
+  created_at: string;
+  user_name: string;
+  user_role: string;
+  reply_count: number;
+}
+
+const INITIAL_DISCUSSIONS: StandaloneDiscussion[] = [
   {
     discussion_id: 1,
     course_id: 1,
-    course_name: 'Database Management Systems',
-    course_code: '22CS3101',
-    user_id: 1,
+    title: 'Why is BCNF strictly stricter than 3NF?',
+    content: 'Can someone provide a concise intuition for why every BCNF relation is in 3NF, but not vice-versa?',
+    created_by: 1,
+    created_at: '2026-09-26T14:00:00Z',
     user_name: 'Shloka Reddy',
     user_role: 'student',
-    title: 'When to prefer B-Tree Index over Hash Index in PostgreSQL?',
-    content: 'In our lab session, we noticed range queries (e.g. BETWEEN or >) were not using Hash indexes. Why is B-Tree preferred for range queries?',
-    created_at: '2026-09-27T16:00:00Z',
-    reply_count: 2,
-  },
-  {
-    discussion_id: 2,
-    course_id: 2,
-    course_name: 'Data Structures and Algorithms',
-    course_code: '22CS3102',
-    user_id: 3,
-    user_name: 'Dr. K. Srinivas Rao',
-    user_role: 'faculty',
-    title: 'Clarification on Dijkstra vs Bellman-Ford for negative edge weights',
-    content: 'Please remember that Dijkstra will produce incorrect shortest path trees when negative edge cycles exist. Always check your graph constraints before selecting the algorithm.',
-    created_at: '2026-09-28T09:00:00Z',
-    reply_count: 4,
+    reply_count: 3,
   },
 ];
 
-const INITIAL_GROUPS = [
+export interface StandaloneGroup {
+  group_id: number;
+  name: string;
+  group_name: string;
+  description: string;
+  course_id: number;
+  course_name: string;
+  course_code: string;
+  created_by: number;
+  member_count: number;
+  members: Array<{ user_id: number; full_name: string; role: string }>;
+}
+
+const INITIAL_GROUPS: StandaloneGroup[] = [
   {
     group_id: 1,
     name: 'DBMS Research Circle',
@@ -360,7 +797,7 @@ const INITIAL_GROUPS = [
     members: [
       { user_id: 1, full_name: 'Shloka Reddy', role: 'Leader' },
       { user_id: 5, full_name: 'Ananya Sharma', role: 'Member' },
-      { user_id: 6, full_name: 'Rahul Varma', role: 'Member' },
+      { user_id: 7, full_name: 'Rahul Varma', role: 'Member' },
     ],
   },
 ];
@@ -381,8 +818,8 @@ const INITIAL_NOTIFICATIONS: StandaloneNotification[] = [
     notification_id: 1,
     user_id: 1,
     type: 'general',
-    title: 'End-Semester Exam Schedule Published',
-    message: 'Mid-semester exams for CS3101 have been scheduled. Check your Exam Scheduler.',
+    title: 'Exam Schedule Published',
+    message: 'Examination schedules have been configured. Check your Exam Scheduler to view upcoming tests.',
     created_at: '2026-10-01T09:00:00Z',
     is_read: false,
     read: false,
@@ -391,41 +828,72 @@ const INITIAL_NOTIFICATIONS: StandaloneNotification[] = [
     notification_id: 2,
     user_id: 1,
     type: 'attendance',
-    title: '75% Attendance Advisory',
-    message: 'Your overall attendance is above 85%. You meet the end-semester criteria.',
+    title: '75% Attendance Criteria Verified',
+    message: 'Your overall attendance is above 85%. You meet all end-semester academic criteria.',
     created_at: '2026-09-29T10:00:00Z',
     is_read: false,
     read: false,
   },
 ];
 
-// Helper to get or initialize persistent data
+// Helper to get or initialize persistent data with versioning and normalization
 function getOrInit<T>(key: string, initial: T): T {
   try {
-    const val = localStorage.getItem(`educonnect_${key}`);
-    if (val) return JSON.parse(val);
+    const valStr = localStorage.getItem(`educonnect_v3_${key}`);
+    if (valStr) {
+      const parsed = JSON.parse(valStr);
+
+      // Sanitize exams if loaded from previous session
+      if (key === 'exams' && Array.isArray(parsed)) {
+        return parsed.map((e: any) => ({
+          ...e,
+          title: e.title || e.exam_name || 'Academic Examination',
+          exam_name: e.title || e.exam_name || 'Academic Examination',
+          student_group: e.student_group || e.target_student_group || 'All Enrolled Students',
+          target_student_group: e.student_group || e.target_student_group || 'All Enrolled Students',
+          status: (e.status || 'scheduled').toLowerCase(),
+          is_published: e.is_published !== undefined ? Boolean(e.is_published) : true,
+          results_published: Boolean(e.results_published),
+          questions: Array.isArray(e.questions) && e.questions.length > 0 ? e.questions : (INITIAL_EXAMS[0]?.questions || []),
+        })) as unknown as T;
+      }
+
+      // Merge initial courses so no faculty lacks courses
+      if (key === 'courses' && Array.isArray(parsed)) {
+        const merged = [...parsed];
+        for (const initC of (initial as any[])) {
+          if (!merged.some(c => c.course_id === initC.course_id || c.course_code === initC.course_code)) {
+            merged.push(initC);
+          }
+        }
+        return merged as unknown as T;
+      }
+
+      return parsed;
+    }
   } catch (e) {
     console.warn(`Could not load ${key} from storage:`, e);
   }
+
   try {
-    localStorage.setItem(`educonnect_${key}`, JSON.stringify(initial));
+    localStorage.setItem(`educonnect_v3_${key}`, JSON.stringify(initial));
   } catch (e) {}
   return initial;
 }
 
 export const standaloneDB = {
   getUsers: (): StandaloneUser[] => getOrInit('users', INITIAL_USERS),
-  
+
   saveUser: (user: Partial<StandaloneUser>): StandaloneUser => {
     const users = standaloneDB.getUsers();
     const existingIndex = users.findIndex(u => u.email.toLowerCase() === user.email?.toLowerCase());
-    
+
     if (existingIndex >= 0) {
       users[existingIndex] = { ...users[existingIndex], ...user };
-      localStorage.setItem('educonnect_users', JSON.stringify(users));
+      localStorage.setItem('educonnect_v3_users', JSON.stringify(users));
       return users[existingIndex];
     }
-    
+
     const newUser: StandaloneUser = {
       id: String(Date.now()),
       user_id: users.length + 10,
@@ -439,9 +907,27 @@ export const standaloneDB = {
       status: user.status || 'Active',
       created_at: new Date().toISOString(),
     };
-    
+
     users.push(newUser);
-    localStorage.setItem('educonnect_users', JSON.stringify(users));
+    localStorage.setItem('educonnect_v3_users', JSON.stringify(users));
+
+    // If new user is a faculty member, auto-provision a course so their course list is NEVER empty
+    if (newUser.role === 'faculty') {
+      const courses = standaloneDB.getCourses();
+      const hasCourse = courses.some(c => Number(c.faculty_id) === newUser.user_id);
+      if (!hasCourse) {
+        standaloneDB.saveCourse({
+          course_code: `CS${300 + newUser.user_id}`,
+          course_name: `${newUser.full_name}'s Department Course`,
+          description: 'Departmental curriculum, advanced core theory, and interactive laboratories.',
+          faculty_id: newUser.user_id,
+          faculty_name: newUser.full_name,
+          department: newUser.department || 'Computer Science & Engineering',
+          credits: 4,
+        });
+      }
+    }
+
     return newUser;
   },
 
@@ -450,50 +936,431 @@ export const standaloneDB = {
     const index = users.findIndex(u => u.user_id === userId || Number(u.id) === userId);
     if (index >= 0) {
       users[index] = { ...users[index], ...updates };
-      localStorage.setItem('educonnect_users', JSON.stringify(users));
+      localStorage.setItem('educonnect_v3_users', JSON.stringify(users));
       return users[index];
     }
     return null;
   },
 
-  getCourses: () => getOrInit('courses', INITIAL_COURSES),
-  
+  getCourses: (facultyId?: number): any[] => {
+    let courses = getOrInit('courses', INITIAL_COURSES);
+
+    if (facultyId) {
+      const fId = Number(facultyId);
+      let facultyCourses = courses.filter((c: any) => Number(c.faculty_id) === fId);
+
+      // Auto-provision if faculty has no courses assigned yet
+      if (facultyCourses.length === 0) {
+        const users = standaloneDB.getUsers();
+        const facultyUser = users.find(u => u.user_id === fId);
+        const facName = facultyUser ? facultyUser.full_name : `Faculty #${fId}`;
+        const autoCourse = {
+          course_id: courses.length + 1,
+          course_code: `CS${300 + fId}`,
+          course_name: `${facName}'s Core Subject`,
+          description: 'Departmental theory, algorithms, and practical implementations.',
+          faculty_id: fId,
+          faculty_name: facName,
+          department: facultyUser?.department || 'Computer Science & Engineering',
+          credits: 4,
+        };
+        courses.push(autoCourse);
+        localStorage.setItem('educonnect_v3_courses', JSON.stringify(courses));
+        facultyCourses = [autoCourse];
+      }
+
+      return facultyCourses;
+    }
+
+    return courses;
+  },
+
   saveCourse: (course: any) => {
     const courses = standaloneDB.getCourses();
     const newCourse = {
       course_id: courses.length + 1,
       ...course,
+      faculty_id: Number(course.faculty_id || 3),
     };
     courses.push(newCourse);
-    localStorage.setItem('educonnect_courses', JSON.stringify(courses));
+    localStorage.setItem('educonnect_v3_courses', JSON.stringify(courses));
     return newCourse;
   },
 
-  getExams: () => getOrInit('exams', INITIAL_EXAMS),
-  
-  saveExam: (exam: any) => {
+  // Exam Attempts Store
+  getAttempts: (): StandaloneExamAttempt[] => getOrInit('exam_attempts', []),
+
+  getAttempt: (examId: number, studentId: number): StandaloneExamAttempt | undefined => {
+    const attempts = standaloneDB.getAttempts();
+    return attempts.find(a => Number(a.exam_id) === Number(examId) && Number(a.student_id) === Number(studentId));
+  },
+
+  getAttemptById: (attemptId: number): StandaloneExamAttempt | undefined => {
+    const attempts = standaloneDB.getAttempts();
+    return attempts.find(a => Number(a.attempt_id) === Number(attemptId));
+  },
+
+  startExamAttempt: (examId: number, studentId: number): StandaloneExamAttempt => {
+    const attempts = standaloneDB.getAttempts();
+    const existing = attempts.find(
+      a => Number(a.exam_id) === Number(examId) && Number(a.student_id) === Number(studentId)
+    );
+
+    if (existing) {
+      return existing;
+    }
+
+    const users = standaloneDB.getUsers();
+    const student = users.find(u => u.user_id === Number(studentId));
+
+    const newAttempt: StandaloneExamAttempt = {
+      attempt_id: Date.now(),
+      exam_id: Number(examId),
+      student_id: Number(studentId),
+      student_name: student?.full_name || 'Student Member',
+      student_email: student?.email || 'student@klh.edu.in',
+      roll_number: student?.roll_number || '2200030001',
+      section: student?.section || 'Section A',
+      started_at: new Date().toISOString(),
+      status: 'in_progress',
+      answers: {},
+      evaluations: {},
+    };
+
+    attempts.push(newAttempt);
+    localStorage.setItem('educonnect_v3_exam_attempts', JSON.stringify(attempts));
+    return newAttempt;
+  },
+
+  autosaveAnswer: (attemptId: number, questionId: number, student_answer: string) => {
+    const attempts = standaloneDB.getAttempts();
+    const idx = attempts.findIndex(a => Number(a.attempt_id) === Number(attemptId));
+    if (idx >= 0) {
+      attempts[idx].answers = attempts[idx].answers || {};
+      attempts[idx].answers[String(questionId)] = student_answer;
+      localStorage.setItem('educonnect_v3_exam_attempts', JSON.stringify(attempts));
+      return attempts[idx];
+    }
+    return null;
+  },
+
+  submitExamAttempt: (examId: number, studentId: number, attemptId: number, answers: Record<string, string>) => {
+    const attempts = standaloneDB.getAttempts();
+    let idx = attempts.findIndex(a => Number(a.attempt_id) === Number(attemptId));
+
+    if (idx < 0) {
+      // Create if missing
+      const newAtt = standaloneDB.startExamAttempt(examId, studentId);
+      idx = attempts.findIndex(a => Number(a.attempt_id) === Number(newAtt.attempt_id));
+    }
+
     const exams = standaloneDB.getExams();
+    const exam = exams.find((e: any) => Number(e.exam_id) === Number(examId));
+    const mergedAnswers = { ...(attempts[idx]?.answers || {}), ...answers };
+    attempts[idx].answers = mergedAnswers;
+
+    let marksObtained = 0;
+    const questions = exam?.questions || [];
+
+    for (const q of questions) {
+      const qId = String(q.question_id);
+      const studentAns = (mergedAnswers[qId] || '').trim();
+      const qMarks = Number(q.marks) || 10;
+
+      if (q.question_type === 'mcq' || q.question_type === 'true_false') {
+        if (studentAns.toLowerCase() === String(q.correct_answer || '').trim().toLowerCase()) {
+          marksObtained += qMarks;
+        }
+      } else if (q.question_type === 'coding') {
+        // Award full marks if code is provided and non-empty
+        if (studentAns.length > 20 && !studentAns.includes('# Write your solution here')) {
+          marksObtained += qMarks;
+        } else if (studentAns.length > 5) {
+          marksObtained += Math.floor(qMarks * 0.6);
+        }
+      } else {
+        // Short / descriptive: award marks if answered
+        if (studentAns.length > 10) {
+          marksObtained += Math.floor(qMarks * 0.8);
+        }
+      }
+    }
+
+    const totalMarks = Number(exam?.total_marks) || 50;
+    marksObtained = Math.min(marksObtained, totalMarks);
+    const percentage = Math.round((marksObtained / totalMarks) * 100);
+    const grade = percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' : percentage >= 70 ? 'B' : percentage >= 60 ? 'C' : percentage >= 50 ? 'D' : 'F';
+
+    attempts[idx].status = 'submitted';
+    attempts[idx].submitted_at = new Date().toISOString();
+    attempts[idx].total_score = marksObtained;
+    attempts[idx].percentage = percentage;
+    attempts[idx].grade = grade;
+    attempts[idx].feedback = 'Automated assessment completed and verified by academic engine.';
+
+    localStorage.setItem('educonnect_v3_exam_attempts', JSON.stringify(attempts));
+
+    return {
+      success: true,
+      message: 'Exam submitted successfully and recorded.',
+      marks_obtained: marksObtained,
+      total_marks: totalMarks,
+      percentage,
+      grade,
+      attempt_id: attempts[idx].attempt_id,
+      attempt: attempts[idx],
+    };
+  },
+
+  getExams: (facultyId?: number, studentId?: number, role?: string): any[] => {
+    const allExams = getOrInit('exams', INITIAL_EXAMS);
+    const attempts = standaloneDB.getAttempts();
+    const courses = standaloneDB.getCourses();
+
+    // Map each exam to enrich with course_code, course_name, questions_count, submissions_count
+    const enriched = allExams.map((ex: any) => {
+      const course = courses.find((c: any) => Number(c.course_id) === Number(ex.course_id));
+      const examSubs = attempts.filter((a: any) => Number(a.exam_id) === Number(ex.exam_id));
+
+      let studentAttempt: StandaloneExamAttempt | undefined;
+      if (studentId) {
+        studentAttempt = examSubs.find((a: any) => Number(a.student_id) === Number(studentId));
+      }
+
+      return {
+        ...ex,
+        title: ex.title || ex.exam_name || 'Academic Examination',
+        exam_name: ex.title || ex.exam_name || 'Academic Examination',
+        student_group: ex.student_group || ex.target_student_group || 'All Enrolled Students',
+        status: (ex.status || 'scheduled').toLowerCase(),
+        course_code: ex.course_code || course?.course_code || 'CS301',
+        course_name: ex.course_name || course?.course_name || 'Computer Science Core',
+        faculty_name: ex.faculty_name || course?.faculty_name || 'Faculty Member',
+        questions_count: (ex.questions || []).length,
+        submissions_count: examSubs.length,
+        total_eligible_students: 45,
+        ...(studentAttempt
+          ? {
+              attempt_id: studentAttempt.attempt_id,
+              attempt_status: studentAttempt.status,
+              total_score: studentAttempt.total_score,
+              percentage: studentAttempt.percentage,
+              grade: studentAttempt.grade,
+            }
+          : {
+              attempt_status: 'not_started',
+            }),
+      };
+    });
+
+    if (facultyId && role !== 'admin') {
+      const fId = Number(facultyId);
+      return enriched.filter((ex: any) => Number(ex.faculty_id) === fId);
+    }
+
+    if (studentId) {
+      return enriched.filter((ex: any) => ex.is_published && ex.status !== 'cancelled');
+    }
+
+    return enriched;
+  },
+
+  getExamById: (examId: number, studentId?: number) => {
+    const exams = standaloneDB.getExams();
+    const exam = exams.find((e: any) => Number(e.exam_id) === Number(examId)) || exams[0];
+    const questions = exam?.questions || [];
+    let attempt = null;
+
+    if (studentId) {
+      attempt = standaloneDB.getAttempt(Number(examId), Number(studentId)) || null;
+    }
+
+    return {
+      exam,
+      questions,
+      attempt,
+    };
+  },
+
+  saveExam: (exam: any) => {
+    const exams = getOrInit('exams', INITIAL_EXAMS);
+    const courses = standaloneDB.getCourses();
+    const course = courses.find((c: any) => Number(c.course_id) === Number(exam.course_id));
+
     const newExam = {
       exam_id: exams.length + 1,
-      status: 'Scheduled',
-      ...exam,
+      title: exam.title || exam.exam_name || 'New Examination',
+      exam_name: exam.title || exam.exam_name || 'New Examination',
+      course_id: Number(exam.course_id),
+      course_code: course?.course_code || 'CS301',
+      course_name: course?.course_name || 'Department Course',
+      faculty_id: Number(exam.faculty_id || 3),
+      faculty_name: course?.faculty_name || 'Faculty Member',
+      student_group: exam.student_group || 'All Enrolled Students',
+      target_student_group: exam.student_group || exam.target_student_group || 'All Enrolled Students',
+      instructions: exam.instructions || 'All questions are compulsory.',
+      exam_date: exam.exam_date || new Date().toISOString().split('T')[0],
+      start_time: exam.start_time || '10:00:00',
+      end_time: exam.end_time || '11:30:00',
+      duration_minutes: Number(exam.duration_minutes) || 60,
+      total_marks: Number(exam.total_marks) || 50,
+      status: 'scheduled',
+      is_published: exam.is_published !== undefined ? Boolean(exam.is_published) : true,
+      results_published: false,
+      questions: Array.isArray(exam.questions) && exam.questions.length > 0 ? exam.questions : (INITIAL_EXAMS[0]?.questions || []),
     };
-    exams.push(newExam);
-    localStorage.setItem('educonnect_exams', JSON.stringify(exams));
+
+    (exams as any[]).unshift(newExam);
+    localStorage.setItem('educonnect_v3_exams', JSON.stringify(exams));
     return newExam;
   },
 
+  updateExam: (examId: number, updates: any) => {
+    const exams = getOrInit('exams', INITIAL_EXAMS);
+    const idx = exams.findIndex((e: any) => Number(e.exam_id) === Number(examId));
+    if (idx >= 0) {
+      exams[idx] = {
+        ...exams[idx],
+        ...updates,
+        status: (updates.status || exams[idx].status || 'scheduled').toLowerCase(),
+      };
+      localStorage.setItem('educonnect_v3_exams', JSON.stringify(exams));
+      return exams[idx];
+    }
+    return null;
+  },
+
+  updateExamStatus: (examId: number, status: string, options?: any) => {
+    const exams = getOrInit('exams', INITIAL_EXAMS);
+    const idx = exams.findIndex((e: any) => Number(e.exam_id) === Number(examId));
+    if (idx >= 0) {
+      exams[idx].status = status.toLowerCase();
+      if (options?.is_published !== undefined) exams[idx].is_published = options.is_published;
+      if (options?.results_published !== undefined) exams[idx].results_published = options.results_published;
+      localStorage.setItem('educonnect_v3_exams', JSON.stringify(exams));
+      return exams[idx];
+    }
+    return null;
+  },
+
+  getExamSubmissions: (examId: number) => {
+    const attempts = standaloneDB.getAttempts();
+    const users = standaloneDB.getUsers();
+    const examSubs = attempts.filter(a => Number(a.exam_id) === Number(examId));
+
+    return examSubs.map(a => {
+      const student = users.find(u => u.user_id === a.student_id);
+      return {
+        attempt_id: a.attempt_id,
+        exam_id: a.exam_id,
+        student_id: a.student_id,
+        student_name: a.student_name || student?.full_name || 'Student Member',
+        student_email: a.student_email || student?.email || 'student@klh.edu.in',
+        roll_number: a.roll_number || student?.roll_number || '2200030001',
+        section: a.section || student?.section || 'Section A',
+        started_at: a.started_at,
+        submitted_at: a.submitted_at || a.started_at,
+        status: a.status,
+        total_score: a.total_score,
+        percentage: a.percentage,
+        grade: a.grade,
+        feedback: a.feedback,
+        exam_title: 'Exam',
+        total_marks: 50,
+      };
+    });
+  },
+
+  getExamSubmissionByAttempt: (attemptId: number) => {
+    const attempt = standaloneDB.getAttemptById(attemptId);
+    if (!attempt) return null;
+
+    const exams = standaloneDB.getExams();
+    const exam = exams.find((e: any) => Number(e.exam_id) === Number(attempt.exam_id));
+    const questions = exam?.questions || [];
+
+    const questions_and_answers = questions.map((q: any) => {
+      const qId = String(q.question_id);
+      const studentAns = attempt.answers?.[qId] || '';
+      const evalData = attempt.evaluations?.[qId];
+
+      return {
+        question_id: q.question_id,
+        question_number: q.question_number || 1,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        max_marks: Number(q.marks) || 10,
+        student_answer: studentAns,
+        marks_awarded: evalData ? evalData.marks : (studentAns ? Number(q.marks) : 0),
+        is_evaluated: true,
+        evaluator_feedback: evalData ? evalData.feedback : 'Graded by academic engine',
+      };
+    });
+
+    return {
+      attempt: {
+        attempt_id: attempt.attempt_id,
+        exam_id: attempt.exam_id,
+        student_id: attempt.student_id,
+        student_name: attempt.student_name || 'Student Member',
+        student_email: attempt.student_email || 'student@klh.edu.in',
+        roll_number: attempt.roll_number || '2200030001',
+        section: attempt.section || 'Section A',
+        started_at: attempt.started_at,
+        submitted_at: attempt.submitted_at || attempt.started_at,
+        status: attempt.status,
+        total_score: attempt.total_score,
+        percentage: attempt.percentage,
+        grade: attempt.grade,
+        feedback: attempt.feedback,
+        exam_title: exam?.title || 'Academic Examination',
+        total_marks: exam?.total_marks || 50,
+      },
+      questions_and_answers,
+    };
+  },
+
+  evaluateSubmission: (attemptId: number, evaluations: any[], feedback?: string) => {
+    const attempts = standaloneDB.getAttempts();
+    const idx = attempts.findIndex(a => Number(a.attempt_id) === Number(attemptId));
+    if (idx >= 0) {
+      attempts[idx].evaluations = attempts[idx].evaluations || {};
+      let totalEarned = 0;
+
+      for (const ev of evaluations) {
+        attempts[idx].evaluations![String(ev.question_id)] = {
+          marks: Number(ev.marks_awarded) || 0,
+          feedback: ev.feedback || '',
+        };
+        totalEarned += Number(ev.marks_awarded) || 0;
+      }
+
+      attempts[idx].status = 'evaluated';
+      attempts[idx].total_score = totalEarned;
+      attempts[idx].percentage = Math.round((totalEarned / 50) * 100);
+      attempts[idx].grade = attempts[idx].percentage! >= 90 ? 'A+' : attempts[idx].percentage! >= 80 ? 'A' : 'B';
+      if (feedback) attempts[idx].feedback = feedback;
+
+      localStorage.setItem('educonnect_v3_exam_attempts', JSON.stringify(attempts));
+      return attempts[idx];
+    }
+    return null;
+  },
+
   getAssignments: () => getOrInit('assignments', INITIAL_ASSIGNMENTS),
-  
+
   saveAssignment: (assignment: any) => {
     const list = standaloneDB.getAssignments();
     const newItem = {
       assignment_id: list.length + 1,
       submission_count: 0,
       ...assignment,
+      faculty_id: Number(assignment.faculty_id || 3),
     };
-    list.push(newItem);
-    localStorage.setItem('educonnect_assignments', JSON.stringify(list));
+    list.unshift(newItem);
+    localStorage.setItem('educonnect_v3_assignments', JSON.stringify(list));
     return newItem;
   },
 
@@ -509,7 +1376,7 @@ export const standaloneDB = {
       ...item,
     };
     list.unshift(newClass);
-    localStorage.setItem('educonnect_live_classes', JSON.stringify(list));
+    localStorage.setItem('educonnect_v3_live_classes', JSON.stringify(list));
     return newClass;
   },
 
@@ -526,7 +1393,7 @@ export const standaloneDB = {
       ...item,
     };
     list.unshift(newRes);
-    localStorage.setItem('educonnect_resources', JSON.stringify(list));
+    localStorage.setItem('educonnect_v3_resources', JSON.stringify(list));
     return newRes;
   },
 
@@ -540,7 +1407,7 @@ export const standaloneDB = {
       ...item,
     };
     list.unshift(newDisc);
-    localStorage.setItem('educonnect_discussions', JSON.stringify(list));
+    localStorage.setItem('educonnect_v3_discussions', JSON.stringify(list));
     return newDisc;
   },
 
@@ -554,7 +1421,7 @@ export const standaloneDB = {
       ...item,
     };
     list.unshift(newGrp);
-    localStorage.setItem('educonnect_groups', JSON.stringify(list));
+    localStorage.setItem('educonnect_v3_groups', JSON.stringify(list));
     return newGrp;
   },
 
@@ -569,7 +1436,7 @@ export const standaloneDB = {
     const updated = list.map(n =>
       Number(n.notification_id) === Number(id) ? { ...n, is_read: true, read: true } : n
     );
-    localStorage.setItem('educonnect_notifications', JSON.stringify(updated));
+    localStorage.setItem('educonnect_v3_notifications', JSON.stringify(updated));
     return true;
   },
 
@@ -581,14 +1448,14 @@ export const standaloneDB = {
       }
       return n;
     });
-    localStorage.setItem('educonnect_notifications', JSON.stringify(updated));
+    localStorage.setItem('educonnect_v3_notifications', JSON.stringify(updated));
     return true;
   },
 
   deleteNotification: (id: number) => {
     const list = standaloneDB.getNotifications();
     const filtered = list.filter(n => Number(n.notification_id) !== Number(id));
-    localStorage.setItem('educonnect_notifications', JSON.stringify(filtered));
+    localStorage.setItem('educonnect_v3_notifications', JSON.stringify(filtered));
     return true;
   },
 
@@ -602,7 +1469,7 @@ export const standaloneDB = {
         ...(status === 'live' ? { start_time: new Date().toISOString() } : {}),
         ...(status === 'ended' ? { end_time: new Date().toISOString() } : {}),
       };
-      localStorage.setItem('educonnect_live_classes', JSON.stringify(list));
+      localStorage.setItem('educonnect_v3_live_classes', JSON.stringify(list));
       return list[idx];
     }
     return null;

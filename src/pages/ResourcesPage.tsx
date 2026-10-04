@@ -133,21 +133,19 @@ export default function ResourcesPage() {
       const userId = Number(profile.user_id || profile.id);
 
       // 1. Get Courses
-      const coursesResponse = await fetch(`${API_URL}/api/courses`);
+      const url = `${API_URL}/api/courses${profile.role === 'faculty' ? `?facultyId=${userId}` : ''}`;
+      const coursesResponse = await fetch(url);
       if (!coursesResponse.ok) throw new Error('Failed to load courses');
       const allCourses: Course[] = await coursesResponse.json();
 
       let availableCourses: Course[] = [];
 
       if (profile.role === 'faculty') {
-        availableCourses = allCourses.filter(
+        availableCourses = (Array.isArray(allCourses) ? allCourses : []).filter(
           (course) => Number(course.faculty_id) === Number(userId)
         );
-        if (availableCourses.length === 0) {
-          availableCourses = allCourses;
-        }
       } else if (profile.role === 'admin') {
-        availableCourses = allCourses;
+        availableCourses = Array.isArray(allCourses) ? allCourses : [];
       } else {
         // Student: fetch enrollments
         const enrollmentResponse = await fetch(
@@ -158,12 +156,9 @@ export default function ResourcesPage() {
           const courseIds = Array.isArray(enrollmentData)
             ? enrollmentData.map((e: any) => Number(e.course_id))
             : [];
-          availableCourses = allCourses.filter((course) =>
+          availableCourses = (Array.isArray(allCourses) ? allCourses : []).filter((course) =>
             courseIds.includes(Number(course.course_id))
           );
-        }
-        if (availableCourses.length === 0) {
-          availableCourses = allCourses;
         }
       }
 

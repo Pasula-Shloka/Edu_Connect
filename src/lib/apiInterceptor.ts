@@ -204,25 +204,56 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   // 2b. FACULTY STUDENT ROSTER
   if (path.includes('/api/faculty/students')) {
     const students = standaloneDB.getUsers().filter(u => u.role === 'student');
-    const enriched = students.map((s, idx) => ({
-      user_id: s.user_id,
-      full_name: s.full_name,
-      email: s.email,
-      roll_number: s.roll_number || `22000300${idx + 1}`,
-      department: s.department || 'Computer Science & Engineering',
-      year: s.year || '3rd Year',
-      section: s.section || (idx % 2 === 0 ? 'Section A' : 'Section B'),
-      status: (s.status?.toLowerCase() === 'active' ? 'active' : 'active') as 'active' | 'inactive',
-      course_id: 1,
-      course_code: '22CS3101',
-      course_name: 'Database Management Systems',
-      enrolled_courses_count: 4,
-      submissions_count: 5,
-      avg_assignment_score: 84.5 + (idx % 10),
-      attendance_present_count: 18 + (idx % 5),
-      attendance_total_count: 22,
-    }));
+    const enriched = students.map((s, idx) => {
+      const att = standaloneDB.getStudentAttendance(s.user_id);
+      const studentSubs = standaloneDB.getSubmissions(s.user_id);
+      const studentEnrolls = standaloneDB.getEnrollments(s.user_id);
+      const gradedSubs = studentSubs.filter(sub => sub.marks !== null);
+      const avgScore = gradedSubs.length > 0
+        ? Math.round(gradedSubs.reduce((acc, cur) => acc + ((cur.marks || 0) / (cur.max_marks || 25)) * 100, 0) / gradedSubs.length)
+        : 0;
+
+      return {
+        user_id: s.user_id,
+        full_name: s.full_name,
+        email: s.email,
+        roll_number: s.roll_number || `22000300${idx + 1}`,
+        department: s.department || 'Computer Science & Engineering',
+        year: s.year || '3rd Year',
+        section: s.section || (idx % 2 === 0 ? 'Section A' : 'Section B'),
+        status: (s.status?.toLowerCase() === 'active' ? 'active' : 'active') as 'active' | 'inactive',
+        course_id: 1,
+        course_code: '22CS3101',
+        course_name: 'Database Management Systems',
+        enrolled_courses_count: studentEnrolls.length,
+        submissions_count: studentSubs.length,
+        avg_assignment_score: avgScore,
+        attendance_present_count: att.overall.present_count,
+        attendance_total_count: att.overall.total_lectures,
+      };
+    });
     return jsonResponse(enriched);
+  }
+
+  // 2c. STUDENT DETAILED PROFILE
+  if (path.includes('/api/students/') && path.includes('/profile')) {
+    const match = path.match(/\/api\/students\/(\d+)\/profile/);
+    const studentId = match ? Number(match[1]) : 0;
+    const users = standaloneDB.getUsers();
+    const student = users.find(u => Number(u.user_id) === studentId) || users[0];
+    const att = standaloneDB.getStudentAttendance(studentId);
+    const subs = standaloneDB.getSubmissions(studentId);
+    const enrolls = standaloneDB.getEnrollments(studentId);
+
+    return jsonResponse({
+      student,
+      attendance: {
+        stats: att.overall,
+        records: att.history,
+      },
+      submissions: subs,
+      enrollments: enrolls,
+    });
   }
 
   if (path.includes('/api/admin/faculty')) {
@@ -344,7 +375,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       const attemptId = Number(matchEval[1]);
       const evals = body.question_evaluations || body.evaluations || [];
       const fb = body.overall_feedback || body.feedback || '';
-      standaloneDB.evaluateSubmission(attemptId, evals, fb);
+      standaloneDB.evaluateExamAttempt(attemptId, evals, fb);
       return jsonResponse({ message: 'Evaluation saved successfully' });
     }
 
@@ -421,29 +452,58 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     return jsonResponse(list);
   }
 
-  if (path.includes('/api/submissions')) {
-    return jsonResponse({ success: true, message: 'Submission uploaded successfully.' });
+  // 5. SUBMISSIONS & EVALUATIONS
+  if (path.includes('/api/faculty/submissions') && path.includes('/evaluate') && method === 'PUT') {
+    const match = path.match(/\/api\/faculty\/submissions\/(\d+)\/evaluate/);
+    const submissionId = match ? Number(match[1]) : 0;
+    const updated = standaloneDB.evaluateAssignmentSubmission(submissionId, body.marks, body.feedback || '');
+    return jsonResponse({ message: 'Marks and feedback saved successfully', submission: updated });
   }
 
   if (path.includes('/api/faculty/submissions')) {
     const facultyId = url.searchParams.get('facultyId');
-    return jsonResponse([
-      {
-        submission_id: 1,
-        assignment_id: 1,
-        assignment_title: 'Assignment 1: ER Modeling & Schema Design',
-        student_id: 1,
-        student_name: 'Shloka Reddy',
-        status: 'Submitted',
-        submitted_at: '2026-09-28T14:30:00Z',
-        marks: 24,
-        faculty_id: facultyId ? Number(facultyId) : 3,
-      },
-    ]);
+    return jsonResponse(standaloneDB.getFacultySubmissions(facultyId ? Number(facultyId) : undefined));
+  }
+
+  if (path.includes('/api/submissions') && path.includes('/grade') && method === 'PUT') {
+    const match = path.match(/\/api\/submissions\/(\d+)\/grade/);
+    const submissionId = match ? Number(match[1]) : 0;
+    const updated = standaloneDB.evaluateAssignmentSubmission(submissionId, body.marks, body.feedback || '');
+    return jsonResponse({ message: 'Submission evaluated successfully', submission: updated });
+  }
+
+  if (path.includes('/api/submissions') && method === 'POST') {
+    const created = standaloneDB.saveSubmission(body);
+    return jsonResponse({ message: 'Assignment submitted successfully', submission: created }, 201);
+  }
+
+  if (path.includes('/api/submissions')) {
+    const match = path.match(/\/api\/submissions\/(\d+)/);
+    const studentId = match ? Number(match[1]) : undefined;
+    return jsonResponse(standaloneDB.getSubmissions(studentId));
+  }
+
+  // 6. ATTENDANCE (INDIVIDUAL & DAILY REGISTRY)
+  if (path.includes('/api/attendance/student/')) {
+    const match = path.match(/\/api\/attendance\/student\/(\d+)/);
+    const studentId = match ? Number(match[1]) : 0;
+    return jsonResponse(standaloneDB.getStudentAttendance(studentId));
+  }
+
+  if (path.includes('/api/attendance/summary')) {
+    const courseId = Number(url.searchParams.get('courseId') || 1);
+    return jsonResponse(standaloneDB.getCourseAttendanceSummary(courseId));
+  }
+
+  if (path.includes('/api/attendance') && method === 'POST') {
+    standaloneDB.saveAttendanceRecords(Number(body.course_id), body.date, body.records || [], body.marked_by);
+    return jsonResponse({ message: 'Attendance records saved successfully' });
   }
 
   if (path.includes('/api/attendance')) {
-    return jsonResponse(standaloneDB.getAttendance());
+    const courseId = Number(url.searchParams.get('courseId') || 1);
+    const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+    return jsonResponse(standaloneDB.getCourseDailyAttendance(courseId, date));
   }
 
   if (path.includes('/api/live-classes')) {
@@ -601,15 +661,13 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
 
   // 9. ENROLLMENTS
   if (path.includes('/api/enrollments')) {
-    return jsonResponse([
-      { enrollment_id: 1, course_id: 1, student_id: 1 },
-      { enrollment_id: 2, course_id: 2, student_id: 1 },
-      { enrollment_id: 3, course_id: 3, student_id: 1 },
-      { enrollment_id: 4, course_id: 4, student_id: 1 },
-      { enrollment_id: 5, course_id: 5, student_id: 1 },
-      { enrollment_id: 6, course_id: 6, student_id: 1 },
-      { enrollment_id: 7, course_id: 7, student_id: 1 },
-    ]);
+    if (method === 'POST') {
+      const created = standaloneDB.saveEnrollment(Number(body.student_id), Number(body.course_id));
+      return jsonResponse({ message: 'Enrolled successfully', enrollment: created }, 201);
+    }
+    const match = path.match(/\/api\/enrollments\/(?:student\/)?(\d+)/);
+    const studentId = match ? Number(match[1]) : undefined;
+    return jsonResponse(standaloneDB.getEnrollments(studentId));
   }
 
   // 10. NOTIFICATIONS

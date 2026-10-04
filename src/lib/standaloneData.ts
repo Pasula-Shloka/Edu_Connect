@@ -631,6 +631,220 @@ const INITIAL_ASSIGNMENTS = [
   },
 ];
 
+export interface StandaloneAttendanceRecord {
+  attendance_id: number;
+  course_id: number;
+  student_id: number;
+  date: string; // 'YYYY-MM-DD'
+  status: 'Present' | 'Absent' | 'Late';
+  marked_by?: number;
+}
+
+const INITIAL_ATTENDANCE_RECORDS: StandaloneAttendanceRecord[] = [
+  // Course 1 (DBMS - Faculty 3)
+  { attendance_id: 101, course_id: 1, student_id: 1, date: '2026-09-20', status: 'Present', marked_by: 3 },
+  { attendance_id: 102, course_id: 1, student_id: 1, date: '2026-09-23', status: 'Present', marked_by: 3 },
+  { attendance_id: 103, course_id: 1, student_id: 1, date: '2026-09-26', status: 'Present', marked_by: 3 },
+  { attendance_id: 104, course_id: 1, student_id: 1, date: '2026-09-29', status: 'Present', marked_by: 3 },
+  { attendance_id: 105, course_id: 1, student_id: 1, date: '2026-10-01', status: 'Present', marked_by: 3 },
+  { attendance_id: 106, course_id: 1, student_id: 1, date: '2026-10-03', status: 'Present', marked_by: 3 },
+
+  { attendance_id: 107, course_id: 1, student_id: 5, date: '2026-09-20', status: 'Present', marked_by: 3 },
+  { attendance_id: 108, course_id: 1, student_id: 5, date: '2026-09-23', status: 'Present', marked_by: 3 },
+  { attendance_id: 109, course_id: 1, student_id: 5, date: '2026-09-26', status: 'Absent', marked_by: 3 },
+  { attendance_id: 110, course_id: 1, student_id: 5, date: '2026-09-29', status: 'Present', marked_by: 3 },
+  { attendance_id: 111, course_id: 1, student_id: 5, date: '2026-10-01', status: 'Present', marked_by: 3 },
+  { attendance_id: 112, course_id: 1, student_id: 5, date: '2026-10-03', status: 'Present', marked_by: 3 },
+
+  { attendance_id: 113, course_id: 1, student_id: 7, date: '2026-09-20', status: 'Present', marked_by: 3 },
+  { attendance_id: 114, course_id: 1, student_id: 7, date: '2026-09-23', status: 'Absent', marked_by: 3 },
+  { attendance_id: 115, course_id: 1, student_id: 7, date: '2026-09-26', status: 'Absent', marked_by: 3 },
+  { attendance_id: 116, course_id: 1, student_id: 7, date: '2026-09-29', status: 'Present', marked_by: 3 },
+  { attendance_id: 117, course_id: 1, student_id: 7, date: '2026-10-01', status: 'Present', marked_by: 3 },
+  { attendance_id: 118, course_id: 1, student_id: 7, date: '2026-10-03', status: 'Present', marked_by: 3 },
+
+  { attendance_id: 119, course_id: 1, student_id: 8, date: '2026-09-20', status: 'Present', marked_by: 3 },
+  { attendance_id: 120, course_id: 1, student_id: 8, date: '2026-09-23', status: 'Present', marked_by: 3 },
+  { attendance_id: 121, course_id: 1, student_id: 8, date: '2026-09-26', status: 'Present', marked_by: 3 },
+  { attendance_id: 122, course_id: 1, student_id: 8, date: '2026-09-29', status: 'Present', marked_by: 3 },
+  { attendance_id: 123, course_id: 1, student_id: 8, date: '2026-10-01', status: 'Present', marked_by: 3 },
+  { attendance_id: 124, course_id: 1, student_id: 8, date: '2026-10-03', status: 'Present', marked_by: 3 },
+
+  { attendance_id: 125, course_id: 1, student_id: 9, date: '2026-09-20', status: 'Present', marked_by: 3 },
+  { attendance_id: 126, course_id: 1, student_id: 9, date: '2026-09-23', status: 'Present', marked_by: 3 },
+  { attendance_id: 127, course_id: 1, student_id: 9, date: '2026-09-26', status: 'Late', marked_by: 3 },
+  { attendance_id: 128, course_id: 1, student_id: 9, date: '2026-09-29', status: 'Present', marked_by: 3 },
+  { attendance_id: 129, course_id: 1, student_id: 9, date: '2026-10-01', status: 'Present', marked_by: 3 },
+  { attendance_id: 130, course_id: 1, student_id: 9, date: '2026-10-03', status: 'Present', marked_by: 3 },
+
+  // Course 2 (DSA - Faculty 3)
+  { attendance_id: 131, course_id: 2, student_id: 1, date: '2026-09-21', status: 'Present', marked_by: 3 },
+  { attendance_id: 132, course_id: 2, student_id: 1, date: '2026-09-24', status: 'Present', marked_by: 3 },
+  { attendance_id: 133, course_id: 2, student_id: 1, date: '2026-09-27', status: 'Absent', marked_by: 3 },
+  { attendance_id: 134, course_id: 2, student_id: 1, date: '2026-09-30', status: 'Present', marked_by: 3 },
+  { attendance_id: 135, course_id: 2, student_id: 1, date: '2026-10-02', status: 'Present', marked_by: 3 },
+
+  { attendance_id: 136, course_id: 2, student_id: 5, date: '2026-09-21', status: 'Present', marked_by: 3 },
+  { attendance_id: 137, course_id: 2, student_id: 5, date: '2026-09-24', status: 'Present', marked_by: 3 },
+  { attendance_id: 138, course_id: 2, student_id: 5, date: '2026-09-27', status: 'Present', marked_by: 3 },
+  { attendance_id: 139, course_id: 2, student_id: 5, date: '2026-09-30', status: 'Absent', marked_by: 3 },
+  { attendance_id: 140, course_id: 2, student_id: 5, date: '2026-10-02', status: 'Present', marked_by: 3 },
+];
+
+export interface StandaloneSubmission {
+  submission_id: number;
+  assignment_id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  submission_url: string;
+  submitted_at: string;
+  marks: number | null;
+  feedback: string | null;
+  assignment_title: string;
+  title: string;
+  unit_name: string | null;
+  max_marks: number;
+  course_id: number;
+  course_code: string;
+  course_name: string;
+  faculty_id: number;
+  status: 'submitted' | 'graded';
+}
+
+const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
+  {
+    submission_id: 1,
+    assignment_id: 1,
+    student_id: 1,
+    student_name: 'Shloka Reddy',
+    student_email: 'shloka@klh.edu.in',
+    submission_url: 'https://cdn.educonnect.in/submissions/assign1_shloka_relational_schema.pdf',
+    submitted_at: '2026-09-28T14:30:00Z',
+    marks: 24,
+    feedback: 'Excellent relational normalization to BCNF. Clean schema diagrams with comprehensive referential constraints.',
+    assignment_title: 'Assignment 1: ER Modeling & Schema Design',
+    title: 'Assignment 1: ER Modeling & Schema Design',
+    unit_name: 'Unit 2: Relational Schema & Normal Forms',
+    max_marks: 25,
+    course_id: 1,
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    faculty_id: 3,
+    status: 'graded',
+  },
+  {
+    submission_id: 2,
+    assignment_id: 2,
+    student_id: 1,
+    student_name: 'Shloka Reddy',
+    student_email: 'shloka@klh.edu.in',
+    submission_url: 'https://cdn.educonnect.in/submissions/assign2_shloka_dijkstra.pdf',
+    submitted_at: '2026-09-29T16:00:00Z',
+    marks: 28,
+    feedback: 'Very thorough priority queue implementation. Benchmark runtime graph matches theoretical O(E log V) complexity.',
+    assignment_title: 'Assignment 2: Graph Shortest Path Implementation',
+    title: 'Assignment 2: Graph Shortest Path Implementation',
+    unit_name: 'Unit 3: Graph Algorithms & Dynamic Programming',
+    max_marks: 30,
+    course_id: 2,
+    course_code: '22CS3102',
+    course_name: 'Data Structures and Algorithms',
+    faculty_id: 3,
+    status: 'graded',
+  },
+  {
+    submission_id: 3,
+    assignment_id: 1,
+    student_id: 5,
+    student_name: 'Ananya Sharma',
+    student_email: 'ananya@klh.edu.in',
+    submission_url: 'https://cdn.educonnect.in/submissions/assign1_ananya.pdf',
+    submitted_at: '2026-09-29T10:15:00Z',
+    marks: 21,
+    feedback: 'Good entity relationship diagrams. Pay closer attention to transitive dependencies in table decomposition.',
+    assignment_title: 'Assignment 1: ER Modeling & Schema Design',
+    title: 'Assignment 1: ER Modeling & Schema Design',
+    unit_name: 'Unit 2: Relational Schema & Normal Forms',
+    max_marks: 25,
+    course_id: 1,
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    faculty_id: 3,
+    status: 'graded',
+  },
+  {
+    submission_id: 4,
+    assignment_id: 2,
+    student_id: 5,
+    student_name: 'Ananya Sharma',
+    student_email: 'ananya@klh.edu.in',
+    submission_url: 'https://cdn.educonnect.in/submissions/assign2_ananya_graph.pdf',
+    submitted_at: '2026-10-02T11:00:00Z',
+    marks: null,
+    feedback: null,
+    assignment_title: 'Assignment 2: Graph Shortest Path Implementation',
+    title: 'Assignment 2: Graph Shortest Path Implementation',
+    unit_name: 'Unit 3: Graph Algorithms & Dynamic Programming',
+    max_marks: 30,
+    course_id: 2,
+    course_code: '22CS3102',
+    course_name: 'Data Structures and Algorithms',
+    faculty_id: 3,
+    status: 'submitted',
+  },
+  {
+    submission_id: 5,
+    assignment_id: 1,
+    student_id: 7,
+    student_name: 'Rahul Verma',
+    student_email: 'rahul@klh.edu.in',
+    submission_url: 'https://cdn.educonnect.in/submissions/assign1_rahul.pdf',
+    submitted_at: '2026-10-03T15:20:00Z',
+    marks: null,
+    feedback: null,
+    assignment_title: 'Assignment 1: ER Modeling & Schema Design',
+    title: 'Assignment 1: ER Modeling & Schema Design',
+    unit_name: 'Unit 2: Relational Schema & Normal Forms',
+    max_marks: 25,
+    course_id: 1,
+    course_code: '22CS3101',
+    course_name: 'Database Management Systems',
+    faculty_id: 3,
+    status: 'submitted',
+  },
+];
+
+export interface StandaloneEnrollment {
+  enrollment_id: number;
+  course_id: number;
+  student_id: number;
+  course_code?: string;
+  course_name?: string;
+}
+
+const INITIAL_ENROLLMENTS: StandaloneEnrollment[] = [
+  { enrollment_id: 1, student_id: 1, course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems' },
+  { enrollment_id: 2, student_id: 1, course_id: 2, course_code: '22CS3102', course_name: 'Data Structures and Algorithms' },
+  { enrollment_id: 3, student_id: 1, course_id: 3, course_code: '22CS3103', course_name: 'Cloud Computing and Microservices' },
+  { enrollment_id: 4, student_id: 1, course_id: 4, course_code: '22CS3104', course_name: 'Compiler Design and Automata' },
+  { enrollment_id: 5, student_id: 1, course_id: 5, course_code: '22CS3105', course_name: 'Advanced Data Structures and Analysis' },
+  { enrollment_id: 6, student_id: 1, course_id: 6, course_code: '22CS3106', course_name: 'Object Oriented Programming with Java' },
+  { enrollment_id: 7, student_id: 1, course_id: 7, course_code: '22CS3107', course_name: 'Operating Systems & Concurrency' },
+  // Student 5 (Ananya)
+  { enrollment_id: 8, student_id: 5, course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems' },
+  { enrollment_id: 9, student_id: 5, course_id: 2, course_code: '22CS3102', course_name: 'Data Structures and Algorithms' },
+  { enrollment_id: 10, student_id: 5, course_id: 3, course_code: '22CS3103', course_name: 'Cloud Computing and Microservices' },
+  // Student 7 (Rahul)
+  { enrollment_id: 11, student_id: 7, course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems' },
+  { enrollment_id: 12, student_id: 7, course_id: 2, course_code: '22CS3102', course_name: 'Data Structures and Algorithms' },
+  // Student 8 (Sneha)
+  { enrollment_id: 13, student_id: 8, course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems' },
+  { enrollment_id: 14, student_id: 8, course_id: 3, course_code: '22CS3103', course_name: 'Cloud Computing and Microservices' },
+  // Student 9 (Vikram)
+  { enrollment_id: 15, student_id: 9, course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems' },
+];
+
 const INITIAL_ATTENDANCE = [
   { course_id: 1, course_code: '22CS3101', course_name: 'Database Management Systems', conducted: 32, attended: 28, percentage: 87.5 },
   { course_id: 2, course_code: '22CS3102', course_name: 'Data Structures and Algorithms', conducted: 30, attended: 26, percentage: 86.6 },
@@ -1438,7 +1652,7 @@ export const standaloneDB = {
     };
   },
 
-  evaluateSubmission: (attemptId: number, evaluations: any[], feedback?: string) => {
+  evaluateExamAttempt: (attemptId: number, evaluations: any[], feedback?: string) => {
     const attempts = standaloneDB.getAttempts();
     const idx = attempts.findIndex(a => Number(a.attempt_id) === Number(attemptId));
     if (idx >= 0) {
@@ -1481,6 +1695,314 @@ export const standaloneDB = {
   },
 
   getAttendance: () => getOrInit('attendance', INITIAL_ATTENDANCE),
+
+  getAttendanceRecords: (): StandaloneAttendanceRecord[] =>
+    getOrInit('attendance_records', INITIAL_ATTENDANCE_RECORDS),
+
+  saveAttendanceRecords: (
+    courseId: number,
+    date: string,
+    records: Array<{ student_id: number; status: 'Present' | 'Absent' | 'Late' }>,
+    markedBy?: number
+  ) => {
+    const list = standaloneDB.getAttendanceRecords();
+    const updatedList = [...list];
+
+    records.forEach((rec) => {
+      const idx = updatedList.findIndex(
+        (a) =>
+          Number(a.course_id) === Number(courseId) &&
+          Number(a.student_id) === Number(rec.student_id) &&
+          a.date === date
+      );
+      if (idx >= 0) {
+        updatedList[idx] = {
+          ...updatedList[idx],
+          status: rec.status,
+          marked_by: markedBy,
+        };
+      } else {
+        updatedList.push({
+          attendance_id: Date.now() + Math.floor(Math.random() * 10000),
+          course_id: Number(courseId),
+          student_id: Number(rec.student_id),
+          date,
+          status: rec.status,
+          marked_by: markedBy,
+        });
+      }
+    });
+
+    localStorage.setItem('educonnect_v3_attendance_records', JSON.stringify(updatedList));
+    return updatedList;
+  },
+
+  getCourseDailyAttendance: (courseId: number, date: string) => {
+    const cId = Number(courseId);
+    const users = standaloneDB.getUsers();
+    const enrollments = standaloneDB.getEnrollments();
+    const enrolledStudentIds = enrollments
+      .filter((e) => Number(e.course_id) === cId)
+      .map((e) => Number(e.student_id));
+
+    let targetStudents = users.filter(
+      (u) => u.role === 'student' && (enrolledStudentIds.length === 0 || enrolledStudentIds.includes(Number(u.user_id)))
+    );
+    if (targetStudents.length === 0) {
+      targetStudents = users.filter((u) => u.role === 'student');
+    }
+
+    const records = standaloneDB.getAttendanceRecords();
+
+    const students = targetStudents.map((s, idx) => {
+      const record = records.find(
+        (r) => Number(r.course_id) === cId && Number(r.student_id) === Number(s.user_id) && r.date === date
+      );
+
+      return {
+        user_id: Number(s.user_id),
+        full_name: s.full_name,
+        email: s.email,
+        roll_number: s.roll_number || `22000300${idx + 1}`,
+        section: s.section || 'Section A',
+        status: (record ? record.status : 'Present') as 'Present' | 'Absent' | 'Late',
+        attendance_id: record ? record.attendance_id : null,
+        date,
+      };
+    });
+
+    return {
+      course_id: cId,
+      date,
+      students,
+    };
+  },
+
+  getCourseAttendanceSummary: (courseId: number) => {
+    const cId = Number(courseId);
+    const users = standaloneDB.getUsers();
+    const records = standaloneDB.getAttendanceRecords().filter((r) => Number(r.course_id) === cId);
+    const enrollments = standaloneDB.getEnrollments();
+    const enrolledStudentIds = enrollments
+      .filter((e) => Number(e.course_id) === cId)
+      .map((e) => Number(e.student_id));
+
+    let targetStudents = users.filter(
+      (u) => u.role === 'student' && (enrolledStudentIds.length === 0 || enrolledStudentIds.includes(Number(u.user_id)))
+    );
+    if (targetStudents.length === 0) {
+      targetStudents = users.filter((u) => u.role === 'student');
+    }
+
+    const distinctDates = Array.from(new Set(records.map((r) => r.date)));
+    const totalConducted = distinctDates.length;
+
+    return targetStudents.map((s) => {
+      const studentRecords = records.filter((r) => Number(r.student_id) === Number(s.user_id));
+      const presentClasses = studentRecords.filter((r) => r.status === 'Present' || r.status === 'Late').length;
+      const absentClasses = studentRecords.filter((r) => r.status === 'Absent').length;
+      const totalClasses = studentRecords.length > 0 ? studentRecords.length : totalConducted;
+      const pct = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 1000) / 10 : 0;
+
+      return {
+        user_id: Number(s.user_id),
+        full_name: s.full_name,
+        roll_number: s.roll_number || `22000300${s.user_id}`,
+        total_classes: totalClasses,
+        present_classes: presentClasses,
+        absent_classes: absentClasses,
+        attendance_percentage: pct,
+      };
+    });
+  },
+
+  getStudentAttendance: (studentId: number) => {
+    const sId = Number(studentId);
+    const courses = standaloneDB.getCourses();
+    const enrollments = standaloneDB.getEnrollments(sId);
+    const records = standaloneDB.getAttendanceRecords().filter((r) => Number(r.student_id) === sId);
+
+    const enrolledCourseIds = enrollments.map((e) => Number(e.course_id));
+    const targetCourses = courses.filter(
+      (c) => enrolledCourseIds.length === 0 || enrolledCourseIds.includes(Number(c.course_id))
+    );
+
+    const courseBreakdown = targetCourses.map((c) => {
+      const cRecords = records.filter((r) => Number(r.course_id) === Number(c.course_id));
+      const total = cRecords.length;
+      const present = cRecords.filter((r) => r.status === 'Present' || r.status === 'Late').length;
+      const pct = total > 0 ? Math.round((present / total) * 1000) / 10 : 0;
+
+      return {
+        course_id: Number(c.course_id),
+        course_code: c.course_code,
+        course_name: c.course_name,
+        total_classes: total,
+        present_classes: present,
+        absent_classes: total - present,
+        course_percentage: pct,
+      };
+    });
+
+    const totalLectures = records.length;
+    const presentCount = records.filter((r) => r.status === 'Present' || r.status === 'Late').length;
+    const absentCount = records.filter((r) => r.status === 'Absent').length;
+    const overallPct = totalLectures > 0 ? Math.round((presentCount / totalLectures) * 1000) / 10 : 0;
+
+    const history = records
+      .map((r) => {
+        const crs = courses.find((c) => Number(c.course_id) === Number(r.course_id));
+        return {
+          attendance_id: r.attendance_id,
+          course_id: r.course_id,
+          course_code: crs?.course_code || 'CS301',
+          course_name: crs?.course_name || 'Academic Course',
+          date: r.date,
+          status: r.status,
+        };
+      })
+      .sort((a, b) => (b.date > a.date ? 1 : -1));
+
+    return {
+      overall: {
+        total_lectures: totalLectures,
+        present_count: presentCount,
+        absent_count: absentCount,
+        overall_percentage: overallPct,
+        percentage: overallPct,
+      },
+      courses: courseBreakdown,
+      history,
+    };
+  },
+
+  getSubmissions: (studentId?: number): StandaloneSubmission[] => {
+    const all = getOrInit('submissions', INITIAL_SUBMISSIONS);
+    if (!studentId) return all;
+    return all.filter((s: StandaloneSubmission) => Number(s.student_id) === Number(studentId));
+  },
+
+  getFacultySubmissions: (facultyId?: number): StandaloneSubmission[] => {
+    const all = getOrInit('submissions', INITIAL_SUBMISSIONS);
+    if (!facultyId) return all;
+    const fId = Number(facultyId);
+    const courses = standaloneDB.getCourses();
+    const facultyCourseIds = courses.filter((c) => Number(c.faculty_id) === fId).map((c) => Number(c.course_id));
+
+    return all.filter(
+      (s: StandaloneSubmission) => Number(s.faculty_id) === fId || facultyCourseIds.includes(Number(s.course_id))
+    );
+  },
+
+  saveSubmission: (data: { assignment_id: number; student_id: number; submission_url: string }): StandaloneSubmission => {
+    const list = standaloneDB.getSubmissions();
+    const assignments = standaloneDB.getAssignments();
+    const courses = standaloneDB.getCourses();
+    const users = standaloneDB.getUsers();
+
+    const assignment = assignments.find((a) => Number(a.assignment_id) === Number(data.assignment_id));
+    const course = courses.find((c) => Number(c.course_id) === Number(assignment?.course_id));
+    const student = users.find((u) => Number(u.user_id) === Number(data.student_id));
+
+    const existingIdx = list.findIndex(
+      (s) => Number(s.assignment_id) === Number(data.assignment_id) && Number(s.student_id) === Number(data.student_id)
+    );
+
+    const submissionItem: StandaloneSubmission = {
+      submission_id: existingIdx >= 0 ? list[existingIdx].submission_id : Date.now(),
+      assignment_id: Number(data.assignment_id),
+      student_id: Number(data.student_id),
+      student_name: student?.full_name || 'Enrolled Student',
+      student_email: student?.email || 'student@klh.edu.in',
+      submission_url: data.submission_url,
+      submitted_at: new Date().toISOString(),
+      marks: existingIdx >= 0 ? list[existingIdx].marks : null,
+      feedback: existingIdx >= 0 ? list[existingIdx].feedback : null,
+      assignment_title: assignment?.title || 'Assignment Deliverable',
+      title: assignment?.title || 'Assignment Deliverable',
+      unit_name: (assignment as any)?.unit_name || 'Curriculum Unit',
+      max_marks: Number(assignment?.max_marks || 25),
+      course_id: Number(assignment?.course_id || course?.course_id || 1),
+      course_code: course?.course_code || '22CS3101',
+      course_name: course?.course_name || 'Database Management Systems',
+      faculty_id: Number(assignment?.faculty_id || course?.faculty_id || 3),
+      status: existingIdx >= 0 && list[existingIdx].marks !== null ? 'graded' : 'submitted',
+    };
+
+    if (existingIdx >= 0) {
+      list[existingIdx] = submissionItem;
+    } else {
+      list.unshift(submissionItem);
+    }
+
+    localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    return submissionItem;
+  },
+
+  evaluateAssignmentSubmission: (submissionId: number, marks: number, feedback: string): StandaloneSubmission => {
+    const list = standaloneDB.getSubmissions();
+    const idx = list.findIndex((s) => Number(s.submission_id) === Number(submissionId));
+    if (idx === -1) {
+      throw new Error('Submission not found');
+    }
+
+    const updated: StandaloneSubmission = {
+      ...list[idx],
+      marks: Number(marks),
+      feedback: feedback ? String(feedback).trim() : null,
+      status: 'graded',
+    };
+
+    list[idx] = updated;
+    localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    return updated;
+  },
+
+  getEnrollments: (studentId?: number): StandaloneEnrollment[] => {
+    const all = getOrInit('enrollments', INITIAL_ENROLLMENTS);
+    if (!studentId) return all;
+    const sId = Number(studentId);
+    let studentEnrollments = all.filter((e: StandaloneEnrollment) => Number(e.student_id) === sId);
+
+    if (studentEnrollments.length === 0) {
+      const courses = standaloneDB.getCourses();
+      const defaultCourses = courses.slice(0, 2);
+      const newEnrollments: StandaloneEnrollment[] = defaultCourses.map((c, i) => ({
+        enrollment_id: all.length + i + 1,
+        student_id: sId,
+        course_id: Number(c.course_id),
+        course_code: c.course_code,
+        course_name: c.course_name,
+      }));
+      all.push(...newEnrollments);
+      localStorage.setItem('educonnect_v3_enrollments', JSON.stringify(all));
+      studentEnrollments = newEnrollments;
+    }
+
+    return studentEnrollments;
+  },
+
+  saveEnrollment: (studentId: number, courseId: number): StandaloneEnrollment => {
+    const all = standaloneDB.getEnrollments();
+    const sId = Number(studentId);
+    const cId = Number(courseId);
+    const existing = all.find((e) => Number(e.student_id) === sId && Number(e.course_id) === cId);
+    if (existing) return existing;
+
+    const courses = standaloneDB.getCourses();
+    const course = courses.find((c) => Number(c.course_id) === cId);
+
+    const newEnrollment: StandaloneEnrollment = {
+      enrollment_id: all.length + 1,
+      student_id: sId,
+      course_id: cId,
+      course_code: course?.course_code,
+      course_name: course?.course_name,
+    };
+    all.push(newEnrollment);
+    localStorage.setItem('educonnect_v3_enrollments', JSON.stringify(all));
+    return newEnrollment;
+  },
 
   getLiveClasses: () => getOrInit('live_classes', INITIAL_LIVE_CLASSES),
   saveLiveClass: (item: any) => {

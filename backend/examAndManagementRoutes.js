@@ -1549,9 +1549,36 @@ router.get("/api/attendance/student/:studentId", async (req, res) => {
             [studentId]
         );
 
+        const rawOverall = statsRes.rows[0];
+        const totalLectures = Number(rawOverall?.total_lectures || 0);
+        const presentCount = Number(rawOverall?.present_count || 0);
+        const absentCount = Number(rawOverall?.absent_count || 0);
+        const overallPct = totalLectures > 0 ? Number(rawOverall?.overall_percentage || 0) : 0;
+
+        const historyRes = await pool.query(
+            `SELECT a.attendance_id, a.course_id, c.course_code, c.course_name, TO_CHAR(a.date, 'YYYY-MM-DD') AS date, a.status
+             FROM attendance a
+             JOIN courses c ON a.course_id = c.course_id
+             WHERE a.student_id = $1
+             ORDER BY a.date DESC`,
+            [studentId]
+        );
+
         res.json({
-            overall: statsRes.rows[0] || { total_lectures: 0, present_count: 0, overall_percentage: 100 },
-            courses: coursesRes.rows
+            overall: {
+                total_lectures: totalLectures,
+                present_count: presentCount,
+                absent_count: absentCount,
+                overall_percentage: overallPct,
+                percentage: overallPct,
+            },
+            courses: coursesRes.rows.map(r => ({
+                ...r,
+                course_percentage: Number(r.course_percentage || 0),
+                total_classes: Number(r.total_classes || 0),
+                present_classes: Number(r.present_classes || 0)
+            })),
+            history: historyRes.rows
         });
     } catch (error) {
         console.error("Student attendance error:", error);

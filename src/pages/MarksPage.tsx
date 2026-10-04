@@ -120,26 +120,14 @@ export default function MarksPage() {
           ])
         );
 
-        const combined = gradedSubmissions
-          .map((submission) => {
-            const course = submission.course_code
-              ? courseMap.get(submission.course_code)
-              : undefined;
-
-            /*
-             * The faculty submissions API returns:
-             * course_code
-             * course_name
-             * assignment_title
-             * max_marks
-             *
-             * It does not return course_id.
-             *
-             * Therefore we find the course using course_code.
-             */
-            if (!course) {
-              return null;
-            }
+        const combined = gradedSubmissions.map((submission) => {
+          const course = (submission.course_code ? courseMap.get(submission.course_code) : undefined)
+              || courses.find((c) => Number(c.course_id) === Number(submission.course_id))
+              || {
+                course_id: submission.course_id || 1,
+                course_code: submission.course_code || 'CS301',
+                course_name: submission.course_name || 'Academic Course',
+              };
 
             const assignment: Assignment = {
               assignment_id: submission.assignment_id,
@@ -232,20 +220,13 @@ export default function MarksPage() {
            * Find the course using the course code returned
            * by /api/submissions/:studentId
            */
-          const course = submission.course_code
-            ? courseCodeMap.get(
-                submission.course_code
-              )
-            : undefined;
-
-          if (!course) {
-            console.warn(
-              'Course not found for submission:',
-              submission
-            );
-
-            return null;
-          }
+          const course = (submission.course_code ? courseCodeMap.get(submission.course_code) : undefined)
+            || allCourses.find((c) => Number(c.course_id) === Number(submission.course_id))
+            || {
+              course_id: submission.course_id || 1,
+              course_code: submission.course_code || 'CS301',
+              course_name: submission.course_name || 'Academic Course',
+            };
 
           /*
            * The backend already gives us:

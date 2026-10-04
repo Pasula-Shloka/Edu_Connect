@@ -108,6 +108,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
   const [attendancePercent, setAttendancePercent] = useState<number | null>(null);
+  const [attendanceTotalLectures, setAttendanceTotalLectures] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const role = profile?.role?.toLowerCase() || 'student';
@@ -231,9 +232,10 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           }
           if (attRes.ok) {
             const attData = await attRes.json();
-            if (attData.overall?.percentage !== undefined) {
-              setAttendancePercent(attData.overall.percentage);
-            }
+            const total = Number(attData.overall?.total_lectures ?? 0);
+            const rate = attData.overall?.overall_percentage ?? attData.overall?.percentage;
+            setAttendanceTotalLectures(total);
+            setAttendancePercent(rate !== null && rate !== undefined ? Number(rate) : (total > 0 ? 0 : null));
           }
         }
 
@@ -835,9 +837,16 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                         </td>
                         <td className="py-3">
                           {isGraded ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                              ✓ {sub.marks} Marks
-                            </span>
+                            <div>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                ✓ {sub.marks} Marks
+                              </span>
+                              {sub.feedback && (
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 italic mt-0.5 max-w-xs truncate" title={sub.feedback}>
+                                  "{sub.feedback}"
+                                </p>
+                              )}
+                            </div>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                               <Clock className="h-3 w-3" /> Awaiting Grade
@@ -1119,10 +1128,26 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             </div>
           </div>
           <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
-            {attendancePercent !== null ? `${attendancePercent}%` : (courses.length > 0 ? '92%' : 'N/A')}
+            {attendanceTotalLectures === 0
+              ? '0%'
+              : attendancePercent !== null
+              ? `${attendancePercent}%`
+              : '0%'}
           </p>
-          <p className={`text-[11px] mt-0.5 font-semibold ${(attendancePercent ?? 92) >= 75 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-            {(attendancePercent ?? 92) >= 75 ? '✓ UGC 75% Eligibility Met' : '⚠️ Shortage (< 75% Threshold)'}
+          <p
+            className={`text-[11px] mt-0.5 font-semibold ${
+              attendanceTotalLectures === 0
+                ? 'text-blue-600 dark:text-blue-400'
+                : (attendancePercent ?? 0) >= 75
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'
+            }`}
+          >
+            {attendanceTotalLectures === 0
+              ? 'ℹ️ New Student • No sessions recorded yet'
+              : (attendancePercent ?? 0) >= 75
+              ? '✓ UGC 75% Eligibility Met'
+              : '⚠️ Shortage (< 75% Threshold)'}
           </p>
         </div>
       </div>

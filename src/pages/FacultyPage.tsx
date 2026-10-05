@@ -525,17 +525,17 @@ export default function FacultyPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Faculty Email (@faculty.edu.in) *
+                  Faculty Institutional Email (fac[EmpID]@klh.edu.in) *
                 </label>
                 <input
                   type="email"
                   required
-                  placeholder="name@faculty.edu.in"
+                  placeholder="fac10342@klh.edu.in"
                   value={addFacultyForm.email}
                   onChange={(e) => setAddFacultyForm({ ...addFacultyForm, email: e.target.value })}
                   className="input-field text-xs py-2"
                 />
-                <span className="text-[10px] text-slate-400">Must belong to domain @faculty.edu.in</span>
+                <span className="text-[10px] text-slate-400">Pattern: fac[EmpID]@klh.edu.in (e.g. fac10342@klh.edu.in)</span>
               </div>
 
               <div>

@@ -221,12 +221,12 @@ router.post("/api/admin/students", async (req, res) => {
         }
 
         let normalizedEmail = email.trim().toLowerCase();
-        if (!normalizedEmail.endsWith("@klh.edu.in")) {
-            if (!normalizedEmail.includes("@")) {
-                normalizedEmail += "@klh.edu.in";
-            } else {
-                return res.status(400).json({ error: "Student email must use domain: name@klh.edu.in" });
-            }
+        const rollMatch = normalizedEmail.match(/^(\d+)(@klh\.edu\.in)?$/);
+        if (rollMatch) {
+            normalizedEmail = `${rollMatch[1]}@klh.edu.in`;
+            if (!roll_number) roll_number = rollMatch[1];
+        } else if (!normalizedEmail.endsWith("@klh.edu.in")) {
+            return res.status(400).json({ error: "Student email must follow the institutional roll number format: rollnumber@klh.edu.in (e.g. 2200030001@klh.edu.in)" });
         }
 
         const existing = await pool.query("SELECT user_id FROM users WHERE LOWER(email) = $1", [normalizedEmail]);
@@ -550,12 +550,11 @@ router.post("/api/admin/faculty", async (req, res) => {
         }
 
         let normalizedEmail = email.trim().toLowerCase();
-        if (!normalizedEmail.endsWith("@faculty.edu.in")) {
-            if (!normalizedEmail.includes("@")) {
-                normalizedEmail += "@faculty.edu.in";
-            } else {
-                return res.status(400).json({ error: "Faculty email must use domain: name@faculty.edu.in" });
-            }
+        if (!normalizedEmail.startsWith("fac") && !normalizedEmail.startsWith("emp") && !normalizedEmail.endsWith("@faculty.edu.in")) {
+            return res.status(400).json({ error: "Faculty email must follow the institutional pattern: fac[EmpID]@klh.edu.in (e.g. fac10342@klh.edu.in)" });
+        }
+        if (!normalizedEmail.includes("@")) {
+            normalizedEmail += "@klh.edu.in";
         }
 
         const existing = await pool.query("SELECT user_id FROM users WHERE LOWER(email) = $1", [normalizedEmail]);

@@ -136,6 +136,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fullName: string,
     role: string
   ) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (role === 'admin' || cleanEmail.includes('admin')) {
+      return {
+        error: 'Administrator registration is disabled. Administrator access is restricted to the single authorized institutional account.',
+      };
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/auth/signup`, {
         method: 'POST',
@@ -247,9 +254,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Sign in network error, creating standalone institutional session:', error);
       const cleanEmail = email.trim().toLowerCase();
-      const detectedRole = cleanEmail.endsWith('@admin.edu.in')
+      const detectedRole = (cleanEmail === 'admin@klh.edu.in' || cleanEmail === 'admin@admin.edu.in')
         ? 'admin'
-        : cleanEmail.endsWith('@faculty.edu.in')
+        : (cleanEmail.startsWith('fac') || cleanEmail.startsWith('emp') || cleanEmail.includes('faculty') || cleanEmail.endsWith('@faculty.edu.in'))
         ? 'faculty'
         : 'student';
 

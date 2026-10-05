@@ -74,23 +74,54 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   if (path.includes('/api/auth/signin') && method === 'POST') {
     const email = (body.email || '').trim().toLowerCase();
     const users = standaloneDB.getUsers();
+
+    // Match exact or alias
     let matchedUser = users.find(u => u.email.toLowerCase() === email);
+
+    // Aliases for Administrator (strictly single admin user)
+    if (!matchedUser && (email === 'admin@klh.edu.in' || email === 'admin@admin.edu.in')) {
+      matchedUser = users.find(u => u.role === 'admin');
+    }
+    // Aliases for legacy student logins
+    if (!matchedUser && (email === 'shloka@klh.edu.in' || email === 'shloka@klh.edu')) {
+      matchedUser = users.find(u => u.roll_number === '2200030001');
+    }
+    if (!matchedUser && email === 'ananya@klh.edu.in') {
+      matchedUser = users.find(u => u.roll_number === '2200030045');
+    }
+    if (!matchedUser && email === 'rahul@klh.edu.in') {
+      matchedUser = users.find(u => u.roll_number === '2200030089');
+    }
+    // Aliases for legacy faculty logins
+    if (!matchedUser && (email === 'faculty@faculty.edu.in' || email === 'fac10342@klh.edu.in')) {
+      matchedUser = users.find(u => u.email === 'fac10342@klh.edu.in') || users.find(u => u.role === 'faculty');
+    }
+    if (!matchedUser && email === 'lalitha@faculty.edu.in') {
+      matchedUser = users.find(u => u.email === 'fac10345@klh.edu.in');
+    }
 
     if (!matchedUser) {
       // Auto-detect institutional role based on email identifier
+      // ADMIN: strictly ONLY admin@klh.edu.in or admin@admin.edu.in!
       const role: 'student' | 'faculty' | 'admin' =
-        email.includes('admin') || email.endsWith('@admin.edu.in')
+        email === 'admin@klh.edu.in' || email === 'admin@admin.edu.in'
           ? 'admin'
-          : email.includes('faculty') || email.includes('prof') || email.includes('teacher') || email.endsWith('@faculty.edu.in') || email.includes('lalitha')
+          : email.startsWith('fac') || email.startsWith('emp') || email.includes('faculty') || email.includes('prof') || email.endsWith('@faculty.edu.in')
           ? 'faculty'
           : 'student';
 
+      const rollMatch = email.match(/^(\d+)/);
+      const studentRoll = role === 'student' ? (rollMatch ? rollMatch[1] : `2200030${Math.floor(100 + Math.random() * 900)}`) : undefined;
+      const formattedEmail = role === 'student' ? `${studentRoll}@klh.edu.in` : role === 'admin' ? 'admin@klh.edu.in' : email;
+
       const nameFromEmail = email.split('@')[0].replace(/[._]/g, ' ');
-      const formattedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+      const formattedName = role === 'student' ? `Student ${studentRoll}` : nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+
       matchedUser = standaloneDB.saveUser({
-        email,
+        email: formattedEmail,
         full_name: formattedName || 'KL University Member',
         role,
+        roll_number: studentRoll,
         status: 'Active',
       });
     }
@@ -112,23 +143,52 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   }
 
   if (path.includes('/api/auth/signup') && method === 'POST') {
-    const email = (body.email || '').trim().toLowerCase();
-    const role = email.endsWith('@admin.edu.in')
-      ? 'admin'
-      : email.endsWith('@faculty.edu.in') || email.includes('faculty')
-      ? 'faculty'
-      : 'student';
+    const rawEmail = (body.email || '').trim().toLowerCase();
+    const requestedRole = (body.role || '').toLowerCase();
+
+    // 1. ADMIN REGISTRATION IS STRICTLY DISABLED
+    if (requestedRole === 'admin' || rawEmail.includes('admin')) {
+      return jsonResponse({
+        error: 'Administrator registration is disabled. Administrator access is restricted to the single authorized institutional account.',
+      }, 403);
+    }
+
+    let finalEmail = rawEmail;
+    let finalRole: 'student' | 'faculty' = requestedRole === 'faculty' ? 'faculty' : 'student';
+    let rollNumber: string | undefined;
+
+    if (finalRole === 'student') {
+      // Must follow rollnumber@klh.edu.in
+      const rollMatch = rawEmail.match(/^(\d+)(@klh\.edu\.in)?$/);
+      if (!rollMatch) {
+        return jsonResponse({
+          error: 'Student email must follow the institutional roll number format: rollnumber@klh.edu.in (e.g. 2200030001@klh.edu.in)',
+        }, 400);
+      }
+      rollNumber = rollMatch[1];
+      finalEmail = `${rollNumber}@klh.edu.in`;
+    } else {
+      // Faculty pattern: fac[EmpID]@klh.edu.in
+      if (!rawEmail.startsWith('fac') && !rawEmail.startsWith('emp') && !rawEmail.endsWith('@faculty.edu.in')) {
+        return jsonResponse({
+          error: 'Faculty email must follow the institutional pattern: fac[EmpID]@klh.edu.in (e.g. fac10342@klh.edu.in)',
+        }, 400);
+      }
+      finalEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@klh.edu.in`;
+    }
 
     const saved = standaloneDB.saveUser({
-      email,
-      full_name: body.full_name || 'New Member',
-      role,
+      email: finalEmail,
+      full_name: body.full_name || (finalRole === 'student' ? `Student ${rollNumber}` : 'Faculty Member'),
+      role: finalRole,
+      roll_number: rollNumber,
       status: 'Active',
     });
 
     return jsonResponse({
       message: 'Account created successfully',
       user_id: saved.user_id,
+      email: saved.email,
     });
   }
 
@@ -607,9 +667,9 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     // 8c. Members list: /api/groups/:id/members
     if (path.includes('/members')) {
       return jsonResponse([
-        { group_member_id: 1, user_id: 1, full_name: 'Shloka Reddy', email: 'shloka@klh.edu.in', role: 'Team Lead' },
-        { group_member_id: 2, user_id: 5, full_name: 'Ananya Sharma', email: 'ananya@klh.edu.in', role: 'Core Contributor' },
-        { group_member_id: 3, user_id: 7, full_name: 'Rahul Varma', email: 'rahul@klh.edu.in', role: 'Research Associate' },
+        { group_member_id: 1, user_id: 1, full_name: 'Shloka Reddy', email: '2200030001@klh.edu.in', role: 'Team Lead' },
+        { group_member_id: 2, user_id: 5, full_name: 'Ananya Sharma', email: '2200030045@klh.edu.in', role: 'Core Contributor' },
+        { group_member_id: 3, user_id: 7, full_name: 'Rahul Varma', email: '2200030089@klh.edu.in', role: 'Research Associate' },
       ]);
     }
 

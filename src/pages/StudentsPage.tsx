@@ -820,16 +820,16 @@ export default function StudentsPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Institutional Email (@klh.edu.in) *
+                  Institutional Email (rollnumber@klh.edu.in) *
                 </label>
                 <input
                   type="email"
-                  placeholder="name@klh.edu.in"
+                  placeholder="2200030001@klh.edu.in"
                   value={addForm.email}
                   onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                   className="input-field text-xs py-2"
                 />
-                <span className="text-[10px] text-slate-400">Must belong to domain @klh.edu.in</span>
+                <span className="text-[10px] text-slate-400">Pattern: [Roll Number]@klh.edu.in</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -851,9 +851,14 @@ export default function StudentsPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 230008012"
+                    placeholder="e.g. 2200030001"
                     value={addForm.roll_number}
-                    onChange={(e) => setAddForm({ ...addForm, roll_number: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const prevRollEmail = addForm.roll_number ? `${addForm.roll_number}@klh.edu.in` : '';
+                      const newEmail = (!addForm.email || addForm.email === prevRollEmail) && val ? `${val}@klh.edu.in` : addForm.email;
+                      setAddForm({ ...addForm, roll_number: val, email: newEmail });
+                    }}
                     className="input-field text-xs py-2"
                   />
                 </div>

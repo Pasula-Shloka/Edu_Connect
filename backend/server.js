@@ -58,22 +58,27 @@ app.post("/api/auth/signup", async (req, res) => {
         const normalizedEmail = email.trim().toLowerCase();
         const normalizedRole = role.trim().toLowerCase();
 
-        if (normalizedRole === "student" && !normalizedEmail.endsWith("@klh.edu.in")) {
-            return res.status(400).json({
-                error: "Student email must use domain: name@klh.edu.in"
+        if (normalizedRole === "admin" || normalizedEmail.includes("admin")) {
+            return res.status(403).json({
+                error: "Administrator registration is disabled. Administrator access is restricted to the single authorized institutional account."
             });
         }
 
-        if (normalizedRole === "faculty" && !normalizedEmail.endsWith("@faculty.edu.in")) {
-            return res.status(400).json({
-                error: "Faculty email must use domain: name@faculty.edu.in"
-            });
+        if (normalizedRole === "student") {
+            const rollMatch = normalizedEmail.match(/^(\d+)(@klh\.edu\.in)?$/);
+            if (!rollMatch) {
+                return res.status(400).json({
+                    error: "Student email must follow the institutional roll number format: rollnumber@klh.edu.in (e.g. 2200030001@klh.edu.in)"
+                });
+            }
         }
 
-        if (normalizedRole === "admin" && !normalizedEmail.endsWith("@admin.edu.in")) {
-            return res.status(400).json({
-                error: "Admin email must use domain: name@admin.edu.in"
-            });
+        if (normalizedRole === "faculty") {
+            if (!normalizedEmail.startsWith("fac") && !normalizedEmail.startsWith("emp") && !normalizedEmail.endsWith("@faculty.edu.in")) {
+                return res.status(400).json({
+                    error: "Faculty email must follow the institutional pattern: fac[EmpID]@klh.edu.in (e.g. fac10342@klh.edu.in)"
+                });
+            }
         }
 
         const existingUser = await pool.query(

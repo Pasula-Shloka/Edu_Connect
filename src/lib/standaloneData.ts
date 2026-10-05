@@ -41,7 +41,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '1',
     user_id: 1,
-    email: 'shloka@klh.edu.in',
+    email: '2200030001@klh.edu.in',
     full_name: 'Shloka Reddy',
     role: 'student',
     department: 'Computer Science & Engineering',
@@ -54,7 +54,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '2',
     user_id: 2,
-    email: 'admin@admin.edu.in',
+    email: 'admin@klh.edu.in',
     full_name: 'System Administrator',
     role: 'admin',
     department: 'Platform Operations & Academic Affairs',
@@ -64,7 +64,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '3',
     user_id: 3,
-    email: 'faculty@faculty.edu.in',
+    email: 'fac10342@klh.edu.in',
     full_name: 'Dr. K. Srinivas Rao',
     role: 'faculty',
     department: 'Computer Science & Engineering',
@@ -74,7 +74,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '4',
     user_id: 4,
-    email: 'lalitha@faculty.edu.in',
+    email: 'fac10345@klh.edu.in',
     full_name: 'Dr. Lalitha',
     role: 'faculty',
     department: 'Computer Science & Engineering',
@@ -84,7 +84,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '5',
     user_id: 5,
-    email: 'ananya@klh.edu.in',
+    email: '2200030045@klh.edu.in',
     full_name: 'Ananya Sharma',
     role: 'student',
     department: 'Computer Science & Engineering',
@@ -97,7 +97,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '6',
     user_id: 6,
-    email: 'priya@faculty.edu.in',
+    email: 'fac10350@klh.edu.in',
     full_name: 'Dr. Priya Sharma',
     role: 'faculty',
     department: 'Computer Science & Engineering',
@@ -107,7 +107,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '7',
     user_id: 7,
-    email: 'rahul@klh.edu.in',
+    email: '2200030089@klh.edu.in',
     full_name: 'Rahul Varma',
     role: 'student',
     department: 'Computer Science & Engineering',
@@ -120,7 +120,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '8',
     user_id: 8,
-    email: 'shloka@klh.edu',
+    email: '2200030090@klh.edu.in',
     full_name: 'Shloka',
     role: 'student',
     department: 'Computer Science & Engineering',
@@ -133,7 +133,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '10',
     user_id: 10,
-    email: 'lalitha@klh.edu',
+    email: 'fac10360@klh.edu.in',
     full_name: 'DR.Lalitha',
     role: 'faculty',
     department: 'Computer Science & Engineering',
@@ -143,7 +143,7 @@ const INITIAL_USERS: StandaloneUser[] = [
   {
     id: '12',
     user_id: 12,
-    email: 'newfaculty@faculty.edu.in',
+    email: 'fac10370@klh.edu.in',
     full_name: 'New Faculty',
     role: 'faculty',
     department: 'Computer Science & Engineering',
@@ -718,7 +718,7 @@ const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
     assignment_id: 1,
     student_id: 1,
     student_name: 'Shloka Reddy',
-    student_email: 'shloka@klh.edu.in',
+    student_email: '2200030001@klh.edu.in',
     submission_url: 'https://cdn.educonnect.in/submissions/assign1_shloka_relational_schema.pdf',
     submitted_at: '2026-09-28T14:30:00Z',
     marks: 24,
@@ -738,7 +738,7 @@ const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
     assignment_id: 2,
     student_id: 1,
     student_name: 'Shloka Reddy',
-    student_email: 'shloka@klh.edu.in',
+    student_email: '2200030001@klh.edu.in',
     submission_url: 'https://cdn.educonnect.in/submissions/assign2_shloka_dijkstra.pdf',
     submitted_at: '2026-09-29T16:00:00Z',
     marks: 28,
@@ -758,7 +758,7 @@ const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
     assignment_id: 1,
     student_id: 5,
     student_name: 'Ananya Sharma',
-    student_email: 'ananya@klh.edu.in',
+    student_email: '2200030045@klh.edu.in',
     submission_url: 'https://cdn.educonnect.in/submissions/assign1_ananya.pdf',
     submitted_at: '2026-09-29T10:15:00Z',
     marks: 21,
@@ -778,7 +778,7 @@ const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
     assignment_id: 2,
     student_id: 5,
     student_name: 'Ananya Sharma',
-    student_email: 'ananya@klh.edu.in',
+    student_email: '2200030045@klh.edu.in',
     submission_url: 'https://cdn.educonnect.in/submissions/assign2_ananya_graph.pdf',
     submitted_at: '2026-10-02T11:00:00Z',
     marks: null,
@@ -798,7 +798,7 @@ const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [
     assignment_id: 1,
     student_id: 7,
     student_name: 'Rahul Verma',
-    student_email: 'rahul@klh.edu.in',
+    student_email: '2200030089@klh.edu.in',
     submission_url: 'https://cdn.educonnect.in/submissions/assign1_rahul.pdf',
     submitted_at: '2026-10-03T15:20:00Z',
     marks: null,
@@ -1173,6 +1173,79 @@ function getOrInit<T>(key: string, initial: T): T {
     if (valStr) {
       const parsed = JSON.parse(valStr);
 
+      // Migrate and normalize users if loaded from previous session
+      if (key === 'users' && Array.isArray(parsed)) {
+        let changed = false;
+        const migrated = parsed.map((u: any) => {
+          let updatedEmail = u.email;
+          if (u.role === 'admin') {
+            if (updatedEmail !== 'admin@klh.edu.in') {
+              updatedEmail = 'admin@klh.edu.in';
+              changed = true;
+            }
+          } else if (u.role === 'student') {
+            const roll = u.roll_number || (typeof u.email === 'string' && u.email.split('@')[0]) || '2200030001';
+            const expectedEmail = `${roll}@klh.edu.in`;
+            if (updatedEmail !== expectedEmail) {
+              updatedEmail = expectedEmail;
+              changed = true;
+            }
+          } else if (u.role === 'faculty') {
+            if (updatedEmail === 'faculty@faculty.edu.in') { updatedEmail = 'fac10342@klh.edu.in'; changed = true; }
+            else if (updatedEmail === 'lalitha@faculty.edu.in') { updatedEmail = 'fac10345@klh.edu.in'; changed = true; }
+            else if (updatedEmail === 'priya@faculty.edu.in') { updatedEmail = 'fac10350@klh.edu.in'; changed = true; }
+            else if (updatedEmail === 'lalitha@klh.edu') { updatedEmail = 'fac10360@klh.edu.in'; changed = true; }
+            else if (updatedEmail === 'newfaculty@faculty.edu.in') { updatedEmail = 'fac10370@klh.edu.in'; changed = true; }
+            else if (typeof updatedEmail === 'string' && !updatedEmail.startsWith('fac') && !updatedEmail.startsWith('emp')) {
+              updatedEmail = `fac${10300 + (Number(u.user_id) || 10)}@klh.edu.in`;
+              changed = true;
+            }
+          }
+          return { ...u, email: updatedEmail };
+        });
+
+        // Filter out rogue admin accounts: Administrator is single user (user_id 2 or email admin@klh.edu.in)
+        const singleAdminList = migrated.filter((u: any) => {
+          if (u.role === 'admin') {
+            return u.email === 'admin@klh.edu.in' || Number(u.user_id) === 2;
+          }
+          return true;
+        });
+
+        if (changed || singleAdminList.length !== parsed.length) {
+          try {
+            localStorage.setItem(`educonnect_v3_${key}`, JSON.stringify(singleAdminList));
+          } catch {}
+        }
+        return singleAdminList as unknown as T;
+      }
+
+      // Migrate submissions student_email if student email changed
+      if (key === 'submissions' && Array.isArray(parsed)) {
+        let changed = false;
+        const migratedSubs = parsed.map((sub: any) => {
+          if (sub.student_id === 1 && sub.student_email !== '2200030001@klh.edu.in') {
+            changed = true;
+            return { ...sub, student_email: '2200030001@klh.edu.in' };
+          }
+          if (sub.student_id === 5 && sub.student_email !== '2200030045@klh.edu.in') {
+            changed = true;
+            return { ...sub, student_email: '2200030045@klh.edu.in' };
+          }
+          if (sub.student_id === 7 && sub.student_email !== '2200030089@klh.edu.in') {
+            changed = true;
+            return { ...sub, student_email: '2200030089@klh.edu.in' };
+          }
+          return sub;
+        });
+        if (changed) {
+          try {
+            localStorage.setItem(`educonnect_v3_${key}`, JSON.stringify(migratedSubs));
+          } catch {}
+        }
+        return migratedSubs as unknown as T;
+      }
+
       // Sanitize exams if loaded from previous session
       if (key === 'exams' && Array.isArray(parsed)) {
         return parsed.map((e: any) => ({
@@ -1216,10 +1289,48 @@ export const standaloneDB = {
 
   saveUser: (user: Partial<StandaloneUser>): StandaloneUser => {
     const users = standaloneDB.getUsers();
-    const existingIndex = users.findIndex(u => u.email.toLowerCase() === user.email?.toLowerCase());
+
+    // Enforce role policies and institutional email patterns
+    let role = user.role || 'student';
+    let email = (user.email || '').trim().toLowerCase();
+    let roll_number = user.roll_number;
+
+    if (role === 'admin') {
+      // Administrator is strictly only one user: admin@klh.edu.in
+      if (email !== 'admin@klh.edu.in' && email !== 'admin@admin.edu.in') {
+        throw new Error('Only the single authorized administrator account (admin@klh.edu.in) is allowed.');
+      }
+      email = 'admin@klh.edu.in';
+    } else if (role === 'student') {
+      if (!roll_number) {
+        const match = email.match(/^(\d+)@/);
+        roll_number = match ? match[1] : `2200030${Math.floor(100 + Math.random() * 900)}`;
+      }
+      // Ensure student email is rollnumber@klh.edu.in
+      if (!email || !/^\d+@klh\.edu\.in$/i.test(email)) {
+        email = `${roll_number}@klh.edu.in`;
+      }
+    } else if (role === 'faculty') {
+      // Ensure faculty pattern: fac[EmpID]@klh.edu.in
+      if (!email || (!email.startsWith('fac') && !email.startsWith('emp'))) {
+        const empCode = 10340 + users.length;
+        email = `fac${empCode}@klh.edu.in`;
+      } else if (!email.endsWith('@klh.edu.in') && !email.endsWith('@faculty.edu.in')) {
+        email = `${email}@klh.edu.in`;
+      }
+    }
+
+    const updatedUserObj: Partial<StandaloneUser> = {
+      ...user,
+      email,
+      role,
+      roll_number: role === 'student' ? roll_number : undefined,
+    };
+
+    const existingIndex = users.findIndex(u => u.email.toLowerCase() === email || (roll_number && u.roll_number === roll_number));
 
     if (existingIndex >= 0) {
-      users[existingIndex] = { ...users[existingIndex], ...user };
+      users[existingIndex] = { ...users[existingIndex], ...updatedUserObj };
       localStorage.setItem('educonnect_v3_users', JSON.stringify(users));
       return users[existingIndex];
     }
@@ -1227,13 +1338,13 @@ export const standaloneDB = {
     const newUser: StandaloneUser = {
       id: String(Date.now()),
       user_id: users.length + 10,
-      email: user.email || '',
-      full_name: user.full_name || 'New Member',
-      role: user.role || 'student',
+      email,
+      full_name: user.full_name || (role === 'student' ? `Student ${roll_number}` : 'New Faculty Member'),
+      role,
       department: user.department || 'Computer Science & Engineering',
       year: user.year || '3rd Year',
       section: user.section || 'Section A',
-      roll_number: user.roll_number || `2200030${Math.floor(100 + Math.random() * 900)}`,
+      roll_number: role === 'student' ? roll_number : undefined,
       status: user.status || 'Active',
       created_at: new Date().toISOString(),
     };

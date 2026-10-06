@@ -24,7 +24,10 @@ export function setupApiInterceptor() {
     const isRemoteHost =
       typeof window !== 'undefined' &&
       window.location.hostname !== 'localhost' &&
-      window.location.hostname !== '127.0.0.1';
+      window.location.hostname !== '127.0.0.1' &&
+      !window.location.hostname.startsWith('192.168.') &&
+      !window.location.hostname.startsWith('10.') &&
+      !window.location.hostname.endsWith('.local');
 
     // If on a remote host (e.g. pasula-shloka.github.io), browser will block http://localhost:5001
     // so we handle it immediately using the standalone academic engine!
@@ -32,10 +35,10 @@ export function setupApiInterceptor() {
       return handleStandaloneRequest(urlStr, init);
     }
 
-    // On localhost, attempt the real backend first
+    // On local environment, attempt the live PostgreSQL backend first
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const response = await ORIGINAL_FETCH(input, {
         ...init,
@@ -45,7 +48,7 @@ export function setupApiInterceptor() {
       clearTimeout(timeoutId);
       return response;
     } catch (networkError) {
-      console.warn('Local backend unavailable, falling back to standalone institutional engine:', networkError);
+      console.warn('Local PostgreSQL backend (port 5001) unavailable, falling back to standalone institutional engine:', networkError);
       return handleStandaloneRequest(urlStr, init);
     }
   };

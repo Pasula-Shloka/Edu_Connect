@@ -116,8 +116,9 @@ export default function AssignmentsPage() {
       fetchStudentId();
     }
 
-    if (profile.role === 'faculty' && profile.user_id) {
-      fetchFacultySubmissions(profile.user_id);
+    if (profile.role === 'faculty') {
+      const fId = Number(profile.user_id || profile.id);
+      fetchFacultySubmissions(fId);
     }
   }, [profile]);
 
@@ -269,14 +270,16 @@ export default function AssignmentsPage() {
   ========================================================= */
 
   async function fetchFacultySubmissions(
-    facultyId: number
+    facultyId?: number
   ) {
     try {
       setFacultyLoading(true);
 
-      const response = await fetch(
-        `http://localhost:5001/api/faculty/submissions?facultyId=${facultyId}`
-      );
+      const url = facultyId
+        ? `http://localhost:5001/api/faculty/submissions?facultyId=${facultyId}`
+        : `http://localhost:5001/api/faculty/submissions`;
+
+      const response = await fetch(url);
 
       const data = await response.json();
 

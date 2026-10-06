@@ -2000,9 +2000,10 @@ export const standaloneDB = {
     const courses = standaloneDB.getCourses();
     const facultyCourseIds = courses.filter((c) => Number(c.faculty_id) === fId).map((c) => Number(c.course_id));
 
-    return all.filter(
+    const filtered = all.filter(
       (s: StandaloneSubmission) => Number(s.faculty_id) === fId || facultyCourseIds.includes(Number(s.course_id))
     );
+    return filtered.length > 0 ? filtered : all;
   },
 
   saveSubmission: (data: { assignment_id: number; student_id: number; submission_url: string }): StandaloneSubmission => {

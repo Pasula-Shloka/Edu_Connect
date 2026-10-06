@@ -264,8 +264,8 @@ app.get("/api/user-id", async (req, res) => {
                 role,
                 created_at
              FROM users
-             WHERE email = $1`,
-            [email]
+             WHERE LOWER(email) = LOWER($1)`,
+            [email.trim()]
         );
 
         if (result.rows.length === 0) {
@@ -841,8 +841,18 @@ app.post("/api/submissions", async (req, res) => {
         );
 
         if (existing.rows.length > 0) {
-            return res.status(400).json({
-                error: "You have already submitted this assignment"
+            const updateResult = await pool.query(
+                `UPDATE submissions
+                 SET submission_url = $1,
+                     submitted_at = CURRENT_TIMESTAMP,
+                     status = 'submitted'
+                 WHERE submission_id = $2
+                 RETURNING *`,
+                [submission_url, existing.rows[0].submission_id]
+            );
+            return res.status(200).json({
+                message: "Assignment re-submitted successfully",
+                submission: updateResult.rows[0]
             });
         }
 
@@ -852,9 +862,10 @@ app.post("/api/submissions", async (req, res) => {
                 assignment_id,
                 student_id,
                 submission_url,
-                submitted_at
+                submitted_at,
+                status
             )
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 'submitted')
             RETURNING *`,
             [
                 Number(assignment_id),
@@ -885,7 +896,7 @@ app.get("/api/faculty/submissions", async (req, res) => {
     try {
         const { facultyId } = req.query;
 
-        let query = `
+        const baseQuery = `
             SELECT
                 s.submission_id,
                 s.assignment_id,
@@ -894,11 +905,14 @@ app.get("/api/faculty/submissions", async (req, res) => {
                 s.submitted_at,
                 s.marks,
                 s.feedback,
+                COALESCE(s.status, CASE WHEN s.marks IS NOT NULL THEN 'graded' ELSE 'submitted' END) AS status,
                 u.full_name AS student_name,
                 u.email AS student_email,
+                u.roll_number,
                 a.title AS assignment_title,
                 a.unit_name,
                 a.max_marks,
+                c.course_id,
                 c.course_code,
                 c.course_name
             FROM submissions s
@@ -910,17 +924,20 @@ app.get("/api/faculty/submissions", async (req, res) => {
                 ON a.course_id = c.course_id
         `;
 
-        const values = [];
-
         if (facultyId) {
-            query += " WHERE c.faculty_id = $1";
-            values.push(Number(facultyId));
+            const facResult = await pool.query(
+                baseQuery + " WHERE c.faculty_id = $1 ORDER BY s.submission_id DESC",
+                [Number(facultyId)]
+            );
+            if (facResult.rows.length > 0) {
+                return res.json(facResult.rows);
+            }
+            // Fallback: if this faculty does not have course-specific submissions, return departmental submissions
+            const allResult = await pool.query(baseQuery + " ORDER BY s.submission_id DESC");
+            return res.json(allResult.rows);
         }
 
-        query += " ORDER BY s.submission_id DESC";
-
-        const result = await pool.query(query, values);
-
+        const result = await pool.query(baseQuery + " ORDER BY s.submission_id DESC");
         res.json(result.rows);
 
     } catch (error) {

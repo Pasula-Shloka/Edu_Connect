@@ -11,7 +11,7 @@ import jwt
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
@@ -95,16 +95,24 @@ class CodeExecutionResponse(BaseModel):
 # -------------------------------------------------------------
 # JWT Verification Dependencies
 # -------------------------------------------------------------
-def verify_jwt_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Dict[str, Any]:
-    if not credentials:
+def verify_jwt_token(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    token: Optional[str] = Query(None, description="Optional: Paste JWT token directly here or use the Authorize button at top right")
+) -> Dict[str, Any]:
+    raw_token = None
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials
+    elif token:
+        raw_token = token
+
+    if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization: Bearer <token> header"
+            detail="Missing Authorization: Bearer <token> header or ?token=<token> parameter"
         )
     
-    token = credentials.credentials
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(raw_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

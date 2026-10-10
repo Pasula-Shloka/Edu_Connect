@@ -29,6 +29,9 @@ import {
   Printer,
   CheckCircle2,
   AlertCircle,
+  UserPlus,
+  Trash2,
+  Shield,
 } from 'lucide-react';
 
 type Group = {
@@ -50,6 +53,16 @@ type GroupMember = {
   role: string;
   full_name: string;
   email: string;
+  roll_number?: string;
+  section?: string;
+};
+
+type EligibleStudent = {
+  user_id: number;
+  full_name: string;
+  email: string;
+  roll_number: string;
+  section?: string;
 };
 
 type Contribution = {
@@ -201,13 +214,24 @@ export default function GroupsPage() {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [tasks, setTasks] = useState<GroupTask[]>([]);
 
-  // Workspace sub-tabs: 'kanban' | 'analytics' | 'scratchpad' | 'huddle' | 'feed'
-  const [workspaceTab, setWorkspaceTab] = useState<'kanban' | 'analytics' | 'scratchpad' | 'huddle' | 'feed'>('kanban');
+  // Workspace sub-tabs: 'kanban' | 'analytics' | 'scratchpad' | 'huddle' | 'feed' | 'roster'
+  const [workspaceTab, setWorkspaceTab] = useState<'kanban' | 'analytics' | 'scratchpad' | 'huddle' | 'feed' | 'roster'>('kanban');
 
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showContributionModal, setShowContributionModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+
+  // Add Member State
+  const [eligibleStudents, setEligibleStudents] = useState<EligibleStudent[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [manualRollOrEmail, setManualRollOrEmail] = useState('');
+  const [selectedMemberRole, setSelectedMemberRole] = useState('Frontend Developer');
+  const [addingMember, setAddingMember] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [addMode, setAddMode] = useState<'select' | 'manual'>('select');
 
   // Group Form
   const [groupName, setGroupName] = useState('');
@@ -316,6 +340,100 @@ export default function GroupsPage() {
       }
     } catch (error) {
       console.error('Group details loading error:', error);
+    }
+  }
+
+  async function loadEligibleStudents() {
+    try {
+      setLoadingStudents(true);
+      const res = await fetch(`${API_URL}/api/eligible-students`);
+      if (res.ok) {
+        const data = await res.json();
+        setEligibleStudents(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to load eligible students:', err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedGroup) return;
+    setAddingMember(true);
+    setMemberError(null);
+
+    try {
+      const payload: any = {
+        role: selectedMemberRole,
+      };
+
+      if (addMode === 'select') {
+        if (!selectedStudentId) {
+          setMemberError('Please select a student from the directory');
+          setAddingMember(false);
+          return;
+        }
+        payload.student_id = Number(selectedStudentId);
+      } else {
+        if (!manualRollOrEmail.trim()) {
+          setMemberError('Please enter student Roll Number or Email');
+          setAddingMember(false);
+          return;
+        }
+        payload.roll_number = manualRollOrEmail.trim();
+        payload.email = manualRollOrEmail.trim();
+      }
+
+      const res = await fetch(`${API_URL}/api/groups/${selectedGroup.group_id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to add team member');
+      }
+
+      // Refresh members
+      const membersRes = await fetch(`${API_URL}/api/groups/${selectedGroup.group_id}/members`);
+      if (membersRes.ok) {
+        const updated = await membersRes.json();
+        setMembers(Array.isArray(updated) ? updated : []);
+      }
+
+      setShowAddMemberModal(false);
+      setSelectedStudentId('');
+      setManualRollOrEmail('');
+      setTaskToast('Team member added to project successfully!');
+      setTimeout(() => setTaskToast(null), 3500);
+    } catch (err: any) {
+      setMemberError(err.message || 'Error adding teammate');
+    } finally {
+      setAddingMember(false);
+    }
+  }
+
+  async function handleRemoveMember(memberUserId: number, memberName: string) {
+    if (!selectedGroup) return;
+    if (!window.confirm(`Are you sure you want to remove ${memberName} from this project workspace?`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/groups/${selectedGroup.group_id}/members/${memberUserId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to remove member');
+      }
+
+      setMembers((prev) => prev.filter((m) => m.user_id !== memberUserId));
+      setTaskToast(`Removed ${memberName} from team`);
+      setTimeout(() => setTaskToast(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove member');
     }
   }
 
@@ -767,6 +885,17 @@ export default function GroupsPage() {
               {/* Workspace Action Buttons */}
               <div className="flex items-center flex-wrap gap-2.5">
                 <button
+                  onClick={() => {
+                    setShowAddMemberModal(true);
+                    loadEligibleStudents();
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition"
+                >
+                  <UserPlus size={14} />
+                  <span>Add Teammate</span>
+                </button>
+
+                <button
                   onClick={() => setWorkspaceTab('huddle')}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 text-xs font-semibold shadow-xs transition"
                 >
@@ -810,6 +939,21 @@ export default function GroupsPage() {
                 <span>Sprint Board (Kanban)</span>
                 <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-white/20">
                   {tasks.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setWorkspaceTab('roster')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors shrink-0 ${
+                  workspaceTab === 'roster'
+                    ? 'bg-red-700 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Users size={14} />
+                <span>Team Roster & Roles</span>
+                <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-bold">
+                  {members.length}
                 </span>
               </button>
 
@@ -1471,6 +1615,123 @@ export default function GroupsPage() {
               </div>
             </div>
           )}
+
+          {/* TAB 6: TEAM ROSTER & ROLES */}
+          {workspaceTab === 'roster' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    <Users className="text-blue-600 dark:text-blue-400" size={18} />
+                    <span>Active Team Roster ({members.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Multi-disciplinary team structure for {selectedGroup.name} • Updates persist directly to PostgreSQL
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowAddMemberModal(true);
+                    loadEligibleStudents();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition shrink-0"
+                >
+                  <UserPlus size={14} />
+                  <span>Add Teammate</span>
+                </button>
+              </div>
+
+              {members.length === 0 ? (
+                <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                  <Users className="mx-auto text-slate-300 dark:text-slate-600 mb-2" size={36} />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No teammates added yet</p>
+                  <p className="text-xs text-slate-400 mt-1">Click "Add Teammate" to invite classmates by Roll Number or selection.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {members.map((member, idx) => {
+                    const pts = memberPoints[member.user_id] || 0;
+                    const assignedTasks = tasks.filter((t) => t.assigned_to_id === member.user_id);
+                    const completedTasks = assignedTasks.filter((t) => t.stage === 'completed');
+
+                    return (
+                      <div
+                        key={member.group_member_id || member.user_id}
+                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
+                                {member.full_name
+                                  ? member.full_name
+                                      .split(' ')
+                                      .map((n) => n[0])
+                                      .slice(0, 2)
+                                      .join('')
+                                      .toUpperCase()
+                                  : 'TM'}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                                  {member.full_name}
+                                </h4>
+                                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                  {member.roll_number || member.email}
+                                </p>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveMember(member.user_id, member.full_name)}
+                              title="Remove member from team"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                              {member.role || 'Contributor'}
+                            </span>
+                            {member.section && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {member.section}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-2 text-center border-t border-slate-100 dark:border-slate-800 pt-3">
+                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                              <p className="text-[10px] text-slate-400 uppercase font-semibold">Effort Score</p>
+                              <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                {pts} pts
+                              </p>
+                            </div>
+                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                              <p className="text-[10px] text-slate-400 uppercase font-semibold">Sprint Tasks</p>
+                              <p className="font-bold text-sm text-slate-700 dark:text-slate-300 mt-0.5">
+                                {completedTasks.length}/{assignedTasks.length} Done
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCircle size={12} /> Active Member
+                          </span>
+                          <span className="font-mono text-[10px]">Rank #{idx + 1}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1747,6 +2008,170 @@ export default function GroupsPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD TEAM MEMBER MODAL */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-xl animate-scale-in">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                  <UserPlus size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                    Add Teammate to Workspace
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Assign roles and collaborate in {selectedGroup?.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddMemberModal(false);
+                  setMemberError(null);
+                }}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {memberError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-300 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{memberError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAddMember} className="space-y-4">
+              {/* Toggle Mode */}
+              <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+                <button
+                  type="button"
+                  onClick={() => setAddMode('select')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${
+                    addMode === 'select'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Select from Directory
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddMode('manual')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${
+                    addMode === 'manual'
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Enter Roll / Email
+                </button>
+              </div>
+
+              {addMode === 'select' ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Select Classmate *
+                  </label>
+                  {loadingStudents ? (
+                    <div className="flex items-center gap-2 p-3 text-xs text-slate-500 border border-slate-200 dark:border-slate-800 rounded-xl">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Loading university students...</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedStudentId}
+                      onChange={(e) => setSelectedStudentId(e.target.value)}
+                      className="input-field text-xs"
+                      required
+                    >
+                      <option value="">-- Choose Student to Add --</option>
+                      {eligibleStudents
+                        .filter((s) => !members.some((m) => m.user_id === s.user_id))
+                        .map((s) => (
+                          <option key={s.user_id} value={s.user_id}>
+                            {s.full_name} ({s.roll_number || s.email}) • {s.section || 'Sec A'}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    Only classmates not yet in this team are listed.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Roll Number or Email *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2200030002 or shloka@klh.edu.in"
+                    value={manualRollOrEmail}
+                    onChange={(e) => setManualRollOrEmail(e.target.value)}
+                    className="input-field text-xs"
+                    required
+                  />
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    Searches verified registered students in PostgreSQL.
+                  </p>
+                </div>
+              )}
+
+              {/* Role Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Team Workspace Role *
+                </label>
+                <select
+                  value={selectedMemberRole}
+                  onChange={(e) => setSelectedMemberRole(e.target.value)}
+                  className="input-field text-xs"
+                >
+                  <option value="Frontend Developer">Frontend Developer (React & UI Design)</option>
+                  <option value="Backend Architect">Backend Architect (Node.js & APIs)</option>
+                  <option value="Database Engineer">Database Engineer (PostgreSQL & Schemas)</option>
+                  <option value="Team Lead">Team Lead / Project Coordinator</option>
+                  <option value="Documentation & QA">Documentation & QA Testing</option>
+                  <option value="Algorithm Researcher">Algorithm & Performance Researcher</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="btn-secondary text-xs py-2 px-3"
+                  disabled={addingMember}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingMember}
+                  className="btn-primary text-xs py-2 px-4 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 border-none"
+                >
+                  {addingMember ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Adding to Team...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={13} />
+                      <span>Add to Team</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

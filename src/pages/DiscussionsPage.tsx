@@ -546,19 +546,19 @@ export default function DiscussionsPage() {
           onClick={() => setShowCreate(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-scale-in"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-scale-in text-slate-900 dark:text-slate-100"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-semibold text-slate-900">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                 New Discussion
               </h3>
 
               <button
                 onClick={() => setShowCreate(false)}
-                className="p-2 rounded-lg hover:bg-slate-100"
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -568,7 +568,7 @@ export default function DiscussionsPage() {
             >
               {/* Course */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Course
                 </label>
 

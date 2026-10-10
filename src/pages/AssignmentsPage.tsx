@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import SubmissionViewerModal from '@/components/SubmissionViewerModal';
 import {
   Plus,
   ClipboardList,
@@ -13,6 +14,9 @@ import {
   Save,
   User,
   FileText,
+  Eye,
+  Search,
+  Filter,
 } from 'lucide-react';
 
 type Course = {
@@ -49,6 +53,8 @@ type FacultySubmission = {
   student_id: number;
   student_name: string;
   student_email: string;
+  roll_number?: string;
+  section?: string;
   submission_url: string;
   submitted_at: string;
   marks: number | null;
@@ -63,6 +69,7 @@ type FacultySubmission = {
 
 export default function AssignmentsPage() {
   const { profile } = useAuth();
+  const [viewingSubmission, setViewingSubmission] = useState<any>(null);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -105,6 +112,11 @@ export default function AssignmentsPage() {
   const [feedbackInputs, setFeedbackInputs] = useState<
     Record<number, string>
   >({});
+
+  const [facultySearchQuery, setFacultySearchQuery] = useState('');
+  const [facultyAssignmentFilter, setFacultyAssignmentFilter] = useState<number | 'all'>('all');
+  const [facultyStatusFilter, setFacultyStatusFilter] = useState<'all' | 'pending' | 'graded'>('all');
+  const [facultySectionFilter, setFacultySectionFilter] = useState('all');
 
   useEffect(() => {
     if (!profile) return;
@@ -316,6 +328,32 @@ export default function AssignmentsPage() {
       setFacultyLoading(false);
     }
   }
+
+  const filteredFacultySubmissions = facultySubmissions.filter((sub) => {
+    if (facultyAssignmentFilter !== 'all' && Number(sub.assignment_id) !== Number(facultyAssignmentFilter)) {
+      return false;
+    }
+    if (facultyStatusFilter === 'pending' && sub.marks !== null) {
+      return false;
+    }
+    if (facultyStatusFilter === 'graded' && sub.marks === null) {
+      return false;
+    }
+    if (facultySectionFilter !== 'all') {
+      const cleanSubSec = (sub.section || '').replace(/^Section\s+/i, '').trim().toUpperCase();
+      const cleanFilterSec = facultySectionFilter.replace(/^Section\s+/i, '').trim().toUpperCase();
+      if (cleanSubSec !== cleanFilterSec) return false;
+    }
+    if (facultySearchQuery.trim()) {
+      const q = facultySearchQuery.toLowerCase().trim();
+      const matchName = sub.student_name?.toLowerCase().includes(q);
+      const matchRoll = sub.roll_number?.toLowerCase().includes(q);
+      const matchEmail = sub.student_email?.toLowerCase().includes(q);
+      const matchTitle = sub.assignment_title?.toLowerCase().includes(q);
+      if (!matchName && !matchRoll && !matchEmail && !matchTitle) return false;
+    }
+    return true;
+  });
 
   /* =========================================================
      OPEN CREATE FORM
@@ -598,22 +636,21 @@ export default function AssignmentsPage() {
   ========================================================= */
 
   function openSubmission(
-    submissionUrl: string
+    submissionObj: any
   ) {
-    if (!submissionUrl) {
+    if (!submissionObj) {
       alert('Submission file is not available');
       return;
     }
 
-    const newWindow = window.open(
-      submissionUrl,
-      '_blank'
-    );
-
-    if (!newWindow) {
-      alert(
-        'Please allow pop-ups in your browser to view the submission.'
-      );
+    if (typeof submissionObj === 'string') {
+      setViewingSubmission({
+        submission_id: Date.now(),
+        submission_url: submissionObj,
+        assignment_title: 'Coursework Assignment Submission',
+      });
+    } else {
+      setViewingSubmission(submissionObj);
     }
   }
 
@@ -799,11 +836,11 @@ export default function AssignmentsPage() {
       {showForm &&
         (profile?.role === 'faculty' ||
           profile?.role === 'admin') && (
-          <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-6 shadow-sm">
 
             <div className="flex items-center justify-between mb-6">
 
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                 Create Assignment
               </h2>
 
@@ -811,7 +848,7 @@ export default function AssignmentsPage() {
                 onClick={() =>
                   setShowForm(false)
                 }
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -968,126 +1005,170 @@ export default function AssignmentsPage() {
       {/* FACULTY SUBMISSIONS */}
       {profile?.role === 'faculty' &&
         showSubmissions && (
-          <div className="bg-white border rounded-xl p-6 shadow-sm">
+          <div id="faculty-submissions-section" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-6 shadow-sm space-y-6">
 
-            <div className="flex items-center justify-between mb-6">
-
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                   Student Submissions
                 </h2>
-
-                <p className="text-sm text-gray-500 mt-1">
-                  Review submissions and give marks and feedback
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Review student coursework, inspect documents, award marks and give feedback
                 </p>
               </div>
 
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                {facultySubmissions.length}{' '}
-                Submission
-                {facultySubmissions.length !== 1
-                  ? 's'
-                  : ''}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 rounded-full text-sm font-semibold">
+                  {filteredFacultySubmissions.length} of {facultySubmissions.length} Shown
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFacultySearchQuery('');
+                    setFacultyAssignmentFilter('all');
+                    setFacultyStatusFilter('all');
+                    setFacultySectionFilter('all');
+                  }}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline px-2 py-1"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
 
+            {/* Filter Toolbar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
+              {/* Search */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  value={facultySearchQuery}
+                  onChange={(e) => setFacultySearchQuery(e.target.value)}
+                  placeholder="Search student or roll no..."
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Assignment Filter */}
+              <div>
+                <select
+                  value={facultyAssignmentFilter}
+                  onChange={(e) => setFacultyAssignmentFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Assignments ({assignments.length})</option>
+                  {assignments.map((a) => (
+                    <option key={a.assignment_id} value={a.assignment_id}>
+                      {a.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Section Filter */}
+              <div>
+                <select
+                  value={facultySectionFilter}
+                  onChange={(e) => setFacultySectionFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Sections (A1 - A7)</option>
+                  {['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'].map((sec) => (
+                    <option key={sec} value={sec}>
+                      Section {sec}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <select
+                  value={facultyStatusFilter}
+                  onChange={(e) => setFacultyStatusFilter(e.target.value as any)}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending Evaluation</option>
+                  <option value="graded">Graded</option>
+                </select>
+              </div>
             </div>
 
             {facultyLoading ? (
               <div className="flex justify-center py-10">
-                <Loader2 className="w-7 h-7 animate-spin" />
+                <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
               </div>
-            ) : facultySubmissions.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-
-                <ClipboardList className="w-12 h-12 mx-auto text-gray-400" />
-
-                <p className="mt-3">
-                  No student submissions yet.
-                </p>
-
+            ) : filteredFacultySubmissions.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                <ClipboardList className="w-12 h-12 mx-auto text-slate-400" />
+                <p className="mt-3 font-medium">No matching student submissions found.</p>
+                <p className="text-xs text-slate-400 mt-1">Try clearing your filters or search terms.</p>
               </div>
             ) : (
-              <div className="space-y-5">
-
-                {facultySubmissions.map(
-                  (submission) => (
-                    <div
-                      key={
-                        submission.submission_id
-                      }
-                      className="border rounded-xl p-5"
-                    >
-
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-
-                        <div>
-
-                          <div className="flex items-center gap-2">
-
-                            <User className="w-5 h-5 text-blue-600" />
-
-                            <h3 className="font-semibold text-lg">
-                              {
-                                submission.student_name
-                              }
-                            </h3>
-
-                          </div>
-
-                          <p className="text-sm text-gray-500 mt-1">
-                            {
-                              submission.student_email
-                            }
-                          </p>
-
-                          <p className="text-sm font-medium mt-3">
-                            {
-                              submission.assignment_title
-                            }
-                          </p>
-
-                          <p className="text-sm text-gray-500 mt-1">
-                            {
-                              submission.course_code
-                            }{' '}
-                            -{' '}
-                            {
-                              submission.course_name
-                            }
-                          </p>
-
-                          {submission.unit_name && (
-                            <p className="text-sm text-gray-500">
-                              Unit:{' '}
-                              {
-                                submission.unit_name
-                              }
-                            </p>
+              <div className="space-y-4">
+                {filteredFacultySubmissions.map((submission) => (
+                  <div
+                    key={submission.submission_id}
+                    className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-blue-200 dark:hover:border-blue-800 transition-colors shadow-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <User className="w-5 h-5 text-blue-600 shrink-0" />
+                          <h3 className="font-semibold text-lg">
+                            {submission.student_name}
+                          </h3>
+                          {submission.roll_number && (
+                            <span className="font-mono text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-bold">
+                              {submission.roll_number}
+                            </span>
                           )}
-
-                          <p className="text-sm text-gray-500 mt-2">
-                            Submitted:{' '}
-                            {new Date(
-                              submission.submitted_at
-                            ).toLocaleString()}
-                          </p>
-
+                          {submission.section && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-bold">
+                              Sec {submission.section.replace(/^Section\s+/i, '')}
+                            </span>
+                          )}
+                          {submission.marks !== null ? (
+                            <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold">
+                              Graded: {submission.marks} / {submission.max_marks}
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-bold">
+                              Needs Evaluation
+                            </span>
+                          )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openSubmission(
-                              submission.submission_url
-                            )
-                          }
-                          className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-blue-600 hover:bg-blue-50"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View Submission
-                        </button>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {submission.student_email}
+                        </p>
 
+                        <div className="mt-3">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {submission.assignment_title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {submission.course_code} - {submission.course_name}
+                            {submission.unit_name ? ` • ${submission.unit_name}` : ''}
+                          </p>
+                        </div>
+
+                        <p className="text-xs text-gray-400 mt-2">
+                          Submitted: {new Date(submission.submitted_at).toLocaleString()}
+                        </p>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openSubmission(submission)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shrink-0"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View Submission</span>
+                      </button>
+                    </div>
 
                       {/* EVALUATION */}
                       <div className="mt-5 pt-5 border-t">
@@ -1221,11 +1302,11 @@ export default function AssignmentsPage() {
 
       {/* ASSIGNMENT LIST */}
       {assignments.length === 0 ? (
-        <div className="bg-white border rounded-xl p-10 text-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-10 text-center">
 
-          <ClipboardList className="w-12 h-12 mx-auto text-gray-400" />
+          <ClipboardList className="w-12 h-12 mx-auto text-slate-400" />
 
-          <p className="mt-3 text-gray-500">
+          <p className="mt-3 text-slate-500 dark:text-slate-400">
             {profile?.role === 'faculty'
               ? 'No assignments created for your courses'
               : 'No assignments available'}
@@ -1247,28 +1328,28 @@ export default function AssignmentsPage() {
                 key={
                   assignment.assignment_id
                 }
-                className="bg-white border rounded-xl p-5 shadow-sm"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-5 shadow-sm"
               >
 
                 <div className="flex items-start justify-between">
 
-                  <div className="p-3 bg-blue-100 rounded-lg">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-950/60 rounded-lg">
 
-                    <ClipboardList className="w-6 h-6 text-blue-600" />
+                    <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
 
                   </div>
 
-                  <span className="text-sm font-medium text-gray-500">
+                  <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {assignment.max_marks} Marks
                   </span>
 
                 </div>
 
-                <h2 className="mt-4 text-lg font-semibold">
+                <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
                   {assignment.title}
                 </h2>
 
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   {assignment.description ||
                     'No description available'}
                 </p>
@@ -1299,12 +1380,12 @@ export default function AssignmentsPage() {
 
                 {/* STUDENT SUBMISSION */}
                 {profile?.role === 'student' && (
-                  <div className="mt-5 border-t pt-5">
+                  <div className="mt-5 border-t border-slate-100 dark:border-slate-800 pt-5">
 
                     {submission ? (
                       <div className="space-y-3">
 
-                        <div className="flex items-center gap-2 text-green-600 font-medium">
+                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
 
                           <CheckCircle className="w-5 h-5" />
 
@@ -1312,7 +1393,7 @@ export default function AssignmentsPage() {
 
                         </div>
 
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">
                           Submitted on:{' '}
                           {new Date(
                             submission.submitted_at
@@ -1323,10 +1404,10 @@ export default function AssignmentsPage() {
                           type="button"
                           onClick={() =>
                             openSubmission(
-                              submission.submission_url
+                              submission
                             )
                           }
-                          className="flex items-center gap-2 text-blue-600 text-sm hover:underline"
+                          className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm hover:underline"
                         >
                           <ExternalLink className="w-4 h-4" />
                           View Submission
@@ -1334,9 +1415,9 @@ export default function AssignmentsPage() {
 
                         {submission.marks !==
                           null && (
-                          <div className="p-3 bg-green-50 rounded-lg">
+                          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 rounded-lg">
 
-                            <p className="font-semibold text-green-700">
+                            <p className="font-semibold text-emerald-700 dark:text-emerald-300">
                               Marks:{' '}
                               {
                                 submission.marks
@@ -1348,7 +1429,7 @@ export default function AssignmentsPage() {
                             </p>
 
                             {submission.feedback && (
-                              <p className="mt-1 text-sm text-gray-600">
+                              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                                 Feedback:{' '}
                                 {
                                   submission.feedback
@@ -1361,7 +1442,7 @@ export default function AssignmentsPage() {
 
                         {submission.marks ===
                           null && (
-                          <div className="p-3 bg-yellow-50 rounded-lg text-sm text-yellow-700">
+                          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-lg text-sm text-amber-800 dark:text-amber-300">
                             Waiting for faculty evaluation
                           </div>
                         )}
@@ -1370,7 +1451,7 @@ export default function AssignmentsPage() {
                     ) : (
                       <div className="space-y-3">
 
-                        <div className="flex items-center gap-2 font-medium text-gray-700">
+                        <div className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-200">
 
                           <Upload className="w-5 h-5" />
 
@@ -1443,6 +1524,28 @@ export default function AssignmentsPage() {
                   </div>
                 )}
 
+                {/* FACULTY CARD FOOTER */}
+                {profile?.role === 'faculty' && (
+                  <div className="mt-5 border-t pt-4 flex items-center justify-between">
+                    <span className="text-xs text-gray-500 font-medium">
+                      Submissions: {facultySubmissions.filter((s) => s.assignment_id === assignment.assignment_id).length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSubmissions(true);
+                        setFacultyAssignmentFilter(assignment.assignment_id);
+                        const el = document.getElementById('faculty-submissions-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold rounded-lg text-xs transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Submissions</span>
+                    </button>
+                  </div>
+                )}
+
               </div>
             );
           })}
@@ -1450,6 +1553,24 @@ export default function AssignmentsPage() {
         </div>
       )}
 
+      {/* In-App Submission Viewer Modal */}
+      {viewingSubmission && (
+        <SubmissionViewerModal
+          submission={viewingSubmission}
+          isFaculty={profile?.role?.toLowerCase() === 'faculty'}
+          onGradeSaved={(subId, newMarks, newFeedback) => {
+            setFacultySubmissions((prev) =>
+              prev.map((s) =>
+                s.submission_id === subId ? { ...s, marks: newMarks, feedback: newFeedback } : s
+              )
+            );
+            setViewingSubmission((prev: any) =>
+              prev ? { ...prev, marks: newMarks, feedback: newFeedback } : null
+            );
+          }}
+          onClose={() => setViewingSubmission(null)}
+        />
+      )}
     </div>
   );
 }

@@ -19,6 +19,14 @@ type Profile = {
   email: string;
   full_name: string;
   role: string;
+  department?: string;
+  year?: string;
+  section?: string;
+  roll_number?: string;
+  parent_name?: string;
+  parent_email?: string;
+  parent_phone?: string;
+  parent_pin?: string;
   created_at?: string;
 };
 
@@ -118,6 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         full_name: data.full_name,
         role: data.role,
+        department: data.department,
+        year: data.year,
+        section: data.section,
+        roll_number: data.roll_number,
+        parent_name: data.parent_name,
+        parent_email: data.parent_email,
+        parent_phone: data.parent_phone,
+        parent_pin: data.parent_pin,
         created_at: data.created_at,
       };
 
@@ -246,6 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setJwtToken(fallbackJwt);
       }
 
+      sessionStorage.removeItem('kl_event_spotlight_shown');
       await fetchProfile(email);
 
       return {
@@ -282,6 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const clientJwt = generateClientJwt(fallbackProfile);
       localStorage.setItem('digital_learning_session', JSON.stringify(fallbackSession));
       localStorage.setItem('educonnect_jwt_token', clientJwt);
+      sessionStorage.removeItem('kl_event_spotlight_shown');
       setSession(fallbackSession);
       setProfile(fallbackProfile);
       setJwtToken(clientJwt);
@@ -293,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     localStorage.removeItem('digital_learning_session');
     localStorage.removeItem('educonnect_jwt_token');
+    sessionStorage.removeItem('kl_event_spotlight_shown');
     setSession(null);
     setProfile(null);
     setJwtToken(null);

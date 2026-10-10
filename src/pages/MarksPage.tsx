@@ -356,23 +356,23 @@ export default function MarksPage() {
           SUMMARY
       ===================================================== */}
 
-      <div className="card p-6 bg-gradient-to-br from-brand-50 to-accent-50 border-brand-100">
+      <div className="card p-6 bg-gradient-to-br from-brand-50 to-accent-50 dark:from-slate-900 dark:to-slate-900/80 border border-brand-100 dark:border-slate-800">
         <div className="flex items-center gap-6">
 
-          <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center shadow-sm">
             <TrendingUp className="w-8 h-8 text-brand-600" />
           </div>
 
           <div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Overall Average
             </p>
 
-            <p className="text-3xl font-bold font-display text-slate-900">
+            <p className="text-3xl font-bold font-display text-slate-900 dark:text-white">
               {Math.round(avgScore)}%
             </p>
 
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               Across {validMarks.length}{' '}
               {validMarks.length === 1
                 ? 'graded item'
@@ -526,18 +526,18 @@ export default function MarksPage() {
                     ================================================= */}
 
                     {submission.feedback && (
-                      <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
 
                         <div className="flex items-start gap-2">
 
                           <MessageSquare className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
 
                           <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1">
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                               Faculty Feedback
                             </p>
 
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
                               {submission.feedback}
                             </p>
                           </div>

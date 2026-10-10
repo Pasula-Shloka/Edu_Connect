@@ -34,14 +34,22 @@ function verifyToken(token) {
  * Express middleware to verify JWT token in Authorization: Bearer <token>
  */
 function authMiddleware(req, res, next) {
+    let token = null;
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+    } else if (req.query && req.query.token) {
+        token = req.query.token;
+    } else if (req.headers["x-access-token"]) {
+        token = req.headers["x-access-token"];
+    }
+
+    if (!token) {
         return res.status(401).json({
-            error: "Authorization header missing or invalid. Format: 'Bearer <token>'"
+            error: "Authorization token missing. Pass via Authorization header or ?token=<token> query parameter."
         });
     }
 
-    const token = authHeader.split(" ")[1];
     try {
         const decoded = verifyToken(token);
         req.user = decoded;

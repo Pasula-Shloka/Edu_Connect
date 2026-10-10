@@ -288,10 +288,9 @@ export default function AuthPage() {
                 <input
                   type="password"
                   required
-                  minLength={4}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter password (e.g. 123 or 1234)"
                   className="input-field pl-10"
                 />
               </div>

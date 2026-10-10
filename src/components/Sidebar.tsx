@@ -19,12 +19,14 @@ import {
   UserCheck,
   ClipboardList,
   Briefcase,
+  CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 
 export type PageKey =
   | 'dashboard'
   | 'courses'
+  | 'timetable'
   | 'students'
   | 'faculty'
   | 'exams'
@@ -64,6 +66,7 @@ export default function Sidebar({
     if (role === 'admin') {
       return [
         { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { key: 'timetable', label: 'Section Timetables', icon: CalendarDays, badge: 'Y25' },
         { key: 'students', label: 'Students', icon: UserCheck },
         { key: 'faculty', label: 'Faculty', icon: Briefcase },
         { key: 'courses', label: 'Courses', icon: BookOpen },
@@ -78,6 +81,7 @@ export default function Sidebar({
     if (role === 'faculty') {
       return [
         { key: 'dashboard', label: 'Faculty Dashboard', icon: LayoutDashboard },
+        { key: 'timetable', label: 'Class Timetable', icon: CalendarDays, badge: 'Y25' },
         { key: 'courses', label: 'My Assigned Courses', icon: BookOpen },
         { key: 'students', label: 'My Students', icon: UserCheck },
         { key: 'resources', label: 'Study Resources', icon: FileText },
@@ -95,6 +99,7 @@ export default function Sidebar({
     // Default: Student
     return [
       { key: 'dashboard', label: 'Student Dashboard', icon: LayoutDashboard },
+      { key: 'timetable', label: 'My Timetable', icon: CalendarDays, badge: 'Y25' },
       { key: 'courses', label: 'Enrolled Courses', icon: BookOpen },
       { key: 'assignments', label: 'Assignments', icon: ClipboardCheck },
       { key: 'exams', label: 'Examinations', icon: ClipboardList },

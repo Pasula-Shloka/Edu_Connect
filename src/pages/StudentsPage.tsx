@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import StudentIDCard from '@/components/StudentIDCard';
 import {
   Users,
   Search,
@@ -20,6 +21,7 @@ import {
   Plus,
   Edit3,
   Save,
+  QrCode,
 } from 'lucide-react';
 
 type StudentSummary = {
@@ -32,6 +34,10 @@ type StudentSummary = {
   year: string;
   section: string;
   roll_number: string;
+  parent_name?: string;
+  parent_email?: string;
+  parent_phone?: string;
+  parent_pin?: string;
   created_at: string;
   enrolled_courses_count: number;
   submissions_count: number;
@@ -109,7 +115,8 @@ export default function StudentsPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [profileData, setProfileData] = useState<StudentProfileData | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [activeTab, setActiveTab] = useState<'courses' | 'attendance' | 'assignments' | 'exams'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'attendance' | 'assignments' | 'exams' | 'idcard'>('courses');
+  const [cardStudent, setCardStudent] = useState<StudentSummary | null>(null);
 
   // Add Student Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -118,10 +125,14 @@ export default function StudentsPage() {
     email: '',
     password: '',
     department: 'Computer Science & Engineering',
-    year: '3rd Year',
-    section: 'Section A',
+    year: '2nd Year',
+    section: 'A1',
     roll_number: '',
     status: 'active',
+    parent_name: '',
+    parent_phone: '',
+    parent_email: '',
+    parent_relation: 'Father',
   });
   const [creatingStudent, setCreatingStudent] = useState(false);
 
@@ -131,10 +142,14 @@ export default function StudentsPage() {
   const [editForm, setEditForm] = useState({
     full_name: '',
     department: 'Computer Science & Engineering',
-    year: '3rd Year',
-    section: 'Section A',
+    year: '2nd Year',
+    section: 'A1',
     roll_number: '',
     status: 'active',
+    parent_name: '',
+    parent_phone: '',
+    parent_email: '',
+    parent_relation: 'Father',
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -231,10 +246,14 @@ export default function StudentsPage() {
         email: '',
         password: '',
         department: 'Computer Science & Engineering',
-        year: '3rd Year',
-        section: 'Section A',
+        year: '2nd Year',
+        section: 'A1',
         roll_number: '',
         status: 'active',
+        parent_name: '',
+        parent_phone: '',
+        parent_email: '',
+        parent_relation: 'Father',
       });
       fetchStudents();
     } catch (err: any) {
@@ -245,15 +264,19 @@ export default function StudentsPage() {
     }
   }
 
-  function openEditModal(student: StudentSummary) {
+  function openEditModal(student: any) {
     setEditingStudentId(student.user_id);
     setEditForm({
       full_name: student.full_name,
       department: student.department || 'Computer Science & Engineering',
-      year: student.year || '3rd Year',
-      section: student.section || 'Section A',
+      year: student.year || '2nd Year',
+      section: student.section || 'A1',
       roll_number: student.roll_number || '',
       status: student.status || 'active',
+      parent_name: student.parent_name || '',
+      parent_phone: student.parent_phone || '',
+      parent_email: student.parent_email || '',
+      parent_relation: student.parent_relation || 'Father',
     });
     setShowEditModal(true);
   }
@@ -296,7 +319,11 @@ export default function StudentsPage() {
       }
       if (deptFilter !== 'all' && s.department !== deptFilter) return false;
       if (yearFilter !== 'all' && s.year !== yearFilter) return false;
-      if (sectionFilter !== 'all' && s.section !== sectionFilter) return false;
+      if (sectionFilter !== 'all') {
+        const studentSec = (s.section || '').replace(/^Section\s+/i, '').trim().toUpperCase();
+        const targetSec = sectionFilter.replace(/^Section\s+/i, '').trim().toUpperCase();
+        if (studentSec !== targetSec && s.section !== sectionFilter) return false;
+      }
       if (statusFilter !== 'all' && s.status !== statusFilter) return false;
       return true;
     });
@@ -381,7 +408,7 @@ export default function StudentsPage() {
             >
               <option value="all">All Years</option>
               <option value="1st Year">1st Year</option>
-              <option value="2nd Year">2nd Year</option>
+              <option value="2nd Year">2nd Year (426)</option>
               <option value="3rd Year">3rd Year</option>
               <option value="4th Year">4th Year</option>
             </select>
@@ -389,12 +416,16 @@ export default function StudentsPage() {
             <select
               value={sectionFilter}
               onChange={(e) => setSectionFilter(e.target.value)}
-              className="input-field text-xs py-2 w-auto"
+              className="input-field text-xs py-2 w-auto font-medium"
             >
-              <option value="all">All Sections</option>
-              <option value="Section A">Section A</option>
-              <option value="Section B">Section B</option>
-              <option value="Section C">Section C</option>
+              <option value="all">All Sections (A1 - A7)</option>
+              <option value="A1">Section A1</option>
+              <option value="A2">Section A2</option>
+              <option value="A3">Section A3</option>
+              <option value="A4">Section A4</option>
+              <option value="A5">Section A5</option>
+              <option value="A6">Section A6</option>
+              <option value="A7">Section A7</option>
             </select>
 
             {role === 'admin' && (
@@ -438,7 +469,7 @@ export default function StudentsPage() {
                   const attRate =
                     s.attendance_total_count > 0
                       ? Math.round((s.attendance_present_count / s.attendance_total_count) * 100)
-                      : 94;
+                      : 0;
 
                   return (
                     <tr
@@ -497,6 +528,15 @@ export default function StudentsPage() {
                           >
                             <Eye className="h-3.5 w-3.5 text-blue-600" />
                             <span>Profile</span>
+                          </button>
+
+                          <button
+                            onClick={() => setCardStudent(s)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-800 dark:text-purple-300 font-semibold"
+                            title="View Smart ID Card and Parent QR Code"
+                          >
+                            <QrCode className="h-3.5 w-3.5 text-purple-600" />
+                            <span>ID Card</span>
                           </button>
 
                           {role === 'admin' && (
@@ -595,6 +635,7 @@ export default function StudentsPage() {
                 { key: 'attendance', label: 'Attendance Records' },
                 { key: 'assignments', label: 'Assignments' },
                 { key: 'exams', label: 'Exam Results' },
+                { key: 'idcard', label: 'ID Card & QR Badge' },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -773,9 +814,48 @@ export default function StudentsPage() {
                       )}
                     </div>
                   )}
+
+                  {/* TAB 5: ID Card & QR Badge */}
+                  {activeTab === 'idcard' && (
+                    <div className="py-4 flex flex-col items-center justify-center">
+                      <StudentIDCard user={profileData.student} />
+                    </div>
+                  )}
                 </>
               ) : null}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Standalone Student ID Card Quick-View Modal */}
+      {cardStudent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
+          onClick={() => setCardStudent(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 max-w-md w-full relative animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Official Digital ID Badge
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {cardStudent.full_name} • {cardStudent.roll_number}
+                </p>
+              </div>
+              <button
+                onClick={() => setCardStudent(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <StudentIDCard user={cardStudent} />
           </div>
         </div>
       )}
@@ -908,10 +988,13 @@ export default function StudentsPage() {
                     onChange={(e) => setAddForm({ ...addForm, section: e.target.value })}
                     className="input-field text-xs py-2 font-bold text-red-700 dark:text-red-400"
                   >
-                    <option value="Section A">Section A</option>
-                    <option value="Section B">Section B</option>
-                    <option value="Section C">Section C</option>
-                    <option value="Section D">Section D</option>
+                    <option value="A1">Section A1</option>
+                    <option value="A2">Section A2</option>
+                    <option value="A3">Section A3</option>
+                    <option value="A4">Section A4</option>
+                    <option value="A5">Section A5</option>
+                    <option value="A6">Section A6</option>
+                    <option value="A7">Section A7</option>
                   </select>
                 </div>
                 <div>
@@ -926,6 +1009,74 @@ export default function StudentsPage() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+              </div>
+
+              {/* PARENT & GUARDIAN PROFILE SECTION */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-red-800 dark:text-red-400 uppercase tracking-wider">
+                    Parent / Guardian Contact Information
+                  </span>
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded font-mono font-bold">
+                    Parent Portal Sync
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent / Guardian Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. P. Ramesh Reddy"
+                      value={addForm.parent_name}
+                      onChange={(e) => setAddForm({ ...addForm, parent_name: e.target.value })}
+                      className="input-field text-xs py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent Phone (For Real SMS/OTP) *
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98480 22334"
+                      value={addForm.parent_phone}
+                      onChange={(e) => setAddForm({ ...addForm, parent_phone: e.target.value })}
+                      className="input-field text-xs py-2 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent Email Address
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="parent@gmail.com"
+                      value={addForm.parent_email}
+                      onChange={(e) => setAddForm({ ...addForm, parent_email: e.target.value })}
+                      className="input-field text-xs py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Relation to Student
+                    </label>
+                    <select
+                      value={addForm.parent_relation}
+                      onChange={(e) => setAddForm({ ...addForm, parent_relation: e.target.value })}
+                      className="input-field text-xs py-2"
+                    >
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Guardian">Guardian</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1005,11 +1156,13 @@ export default function StudentsPage() {
                   onChange={(e) => setEditForm({ ...editForm, section: e.target.value })}
                   className="input-field text-xs py-2 font-bold text-red-700 dark:text-red-400"
                 >
-                  <option value="Section A">Section A</option>
-                  <option value="Section B">Section B</option>
-                  <option value="Section C">Section C</option>
-                  <option value="Section D">Section D</option>
-                  <option value="Section E">Section E</option>
+                  <option value="A1">Section A1</option>
+                  <option value="A2">Section A2</option>
+                  <option value="A3">Section A3</option>
+                  <option value="A4">Section A4</option>
+                  <option value="A5">Section A5</option>
+                  <option value="A6">Section A6</option>
+                  <option value="A7">Section A7</option>
                 </select>
                 <span className="text-[10px] text-slate-400">
                   Students in this section will take section-specific exams and attendance rolls.
@@ -1074,6 +1227,74 @@ export default function StudentsPage() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+              </div>
+
+              {/* PARENT PROFILE EDIT SECTION */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-red-800 dark:text-red-400 uppercase tracking-wider">
+                    Parent / Guardian Contact Information
+                  </span>
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded font-mono font-bold">
+                    Parent Portal Sync
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent / Guardian Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. P. Ramesh Reddy"
+                      value={editForm.parent_name}
+                      onChange={(e) => setEditForm({ ...editForm, parent_name: e.target.value })}
+                      className="input-field text-xs py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent Phone (For Real SMS/OTP)
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 98480 22334"
+                      value={editForm.parent_phone}
+                      onChange={(e) => setEditForm({ ...editForm, parent_phone: e.target.value })}
+                      className="input-field text-xs py-2 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Parent Email Address
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="parent@gmail.com"
+                      value={editForm.parent_email}
+                      onChange={(e) => setEditForm({ ...editForm, parent_email: e.target.value })}
+                      className="input-field text-xs py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Relation to Student
+                    </label>
+                    <select
+                      value={editForm.parent_relation}
+                      onChange={(e) => setEditForm({ ...editForm, parent_relation: e.target.value })}
+                      className="input-field text-xs py-2"
+                    >
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Guardian">Guardian</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

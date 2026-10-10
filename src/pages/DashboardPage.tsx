@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { PageKey } from '@/components/Sidebar';
+import StudentIDCard from '@/components/StudentIDCard';
+import VibeCheckInModal from '@/components/VibeCheckInModal';
+import FacultyVibeMeter from '@/components/FacultyVibeMeter';
+import CampusEventPosterModal, { type EventPoster } from '@/components/CampusEventPosterModal';
 import {
   BookOpen,
   ClipboardCheck,
@@ -29,7 +33,19 @@ import {
   ClipboardList,
   Briefcase,
   UserPlus,
+  Bell,
+  Calculator,
+  MessageSquare,
+  Send,
+  Check,
+  Loader2,
+  Smartphone,
+  Radio,
+  Megaphone,
+  Flame,
 } from 'lucide-react';
+import { getCurrentAndNextClass, normalizeSection, TIMETABLE_SECTIONS } from '@/lib/timetableData';
+import { triggerImmediateMobileAlertTest } from '@/services/scheduleNotifier';
 
 interface DashboardPageProps {
   onNavigate: (page: PageKey) => void;
@@ -111,8 +127,122 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [attendanceTotalLectures, setAttendanceTotalLectures] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  // Campus Event Posters Spotlight & Admin Studio state
+  const [showEventPosterModal, setShowEventPosterModal] = useState(false);
+  const [eventModalAdminMode, setEventModalAdminMode] = useState(false);
+  const [eventPosters, setEventPosters] = useState<EventPoster[]>([]);
+
+  // Real-time Class Alert state
+  const [classAlertLoading, setClassAlertLoading] = useState(false);
+  const [classAlertStatus, setClassAlertStatus] = useState<{
+    success: boolean;
+    message: string;
+    phone?: string;
+    alert_text?: string;
+    whatsapp_link?: string;
+    sms_link?: string;
+  } | null>(null);
+
+  // Academic Attendance Compliance state
+  const [calcAttended, setCalcAttended] = useState<number>(0);
+  const [calcTotal, setCalcTotal] = useState<number>(0);
+
   const role = profile?.role?.toLowerCase() || 'student';
   const userId = Number(profile?.user_id || profile?.id);
+
+  // Load event posters & auto-trigger popup on student login
+  async function loadEventPosters() {
+    try {
+      const res = await fetch(`${API_URL}/api/event-posters${role === 'admin' ? '' : '?activeOnly=true'}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setEventPosters(data);
+        }
+      }
+    } catch {
+      // Fallback handled inside CampusEventPosterModal
+    }
+  }
+
+  useEffect(() => {
+    if (!profile) return;
+    loadEventPosters();
+
+    // Auto-open Campus Event Poster Spotlight popup when a student logs into the portal
+    if (role === 'student') {
+      const alreadyShown = sessionStorage.getItem('kl_event_spotlight_shown');
+      if (!alreadyShown) {
+        sessionStorage.setItem('kl_event_spotlight_shown', 'true');
+        const timer = setTimeout(() => {
+          setEventModalAdminMode(false);
+          setShowEventPosterModal(true);
+        }, 350);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [profile?.email, role]);
+
+  // Sync calculator defaults when attendance records change
+  useEffect(() => {
+    if (attendanceTotalLectures > 0) {
+      const rate = attendancePercent || 0;
+      const attended = Math.round((rate / 100) * attendanceTotalLectures);
+      setCalcAttended(attended);
+      setCalcTotal(attendanceTotalLectures);
+    } else {
+      setCalcAttended(0);
+      setCalcTotal(0);
+    }
+  }, [attendanceTotalLectures, attendancePercent]);
+
+  // Timetable computation for student section (E1 to E7)
+  const studentSection = normalizeSection(profile?.section || (profile as any)?.class_section || 'E4');
+  const classStatus = getCurrentAndNextClass(studentSection);
+
+  async function handleSendNextClassAlert() {
+    const targetClass = classStatus.nextClass || classStatus.currentClass;
+    const targetSlot = classStatus.nextSlot || classStatus.currentSlot;
+    if (!targetClass) return;
+
+    try {
+      setClassAlertLoading(true);
+      setClassAlertStatus(null);
+      const res = await fetch(`${API_URL}/api/timetable/send-alert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: userId,
+          student_name: profile?.full_name || 'Student',
+          student_email: profile?.email || 'shloka.p@klh.edu.in',
+          class_details: {
+            title: targetClass.title,
+            code: targetClass.code,
+            faculty: targetClass.faculty,
+            room: targetClass.room,
+            time: targetSlot?.displayTime || 'Upcoming Period',
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setClassAlertStatus(data);
+      } else {
+        setClassAlertStatus({
+          success: false,
+          message: data.error || 'Failed to dispatch class notification.',
+        });
+      }
+    } catch (err: any) {
+      setClassAlertStatus({
+        success: false,
+        message: err.message || 'Network error triggering alert',
+      });
+    } finally {
+      setClassAlertLoading(false);
+    }
+  }
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -266,6 +396,17 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
     return (
       <div className="space-y-6 animate-fade-in">
+        {/* Admin Event Poster Management & Spotlight Preview Modal */}
+        <CampusEventPosterModal
+          isOpen={showEventPosterModal}
+          onClose={() => {
+            setShowEventPosterModal(false);
+            loadEventPosters();
+          }}
+          isAdmin={true}
+          initialAdminMode={eventModalAdminMode}
+        />
+
         {/* Admin Header Banner with Campus Photo */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm text-white">
           <div
@@ -295,6 +436,16 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
 
             <div className="flex flex-wrap items-center gap-2.5">
               <button
+                onClick={() => {
+                  setEventModalAdminMode(true);
+                  setShowEventPosterModal(true);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-rose-950/50 transition-all"
+              >
+                <Megaphone className="h-4 w-4" />
+                <span>Manage Event Posters</span>
+              </button>
+              <button
                 onClick={() => onNavigate('students')}
                 className="btn-primary"
               >
@@ -317,6 +468,88 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Admin Campus Event Banners & Login Popup Studio Card */}
+        <div className="card p-6 border-2 border-rose-500/20 dark:border-rose-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-rose-950/80 text-white">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300 text-[10px] font-extrabold uppercase tracking-wider mb-1.5">
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                Student Login Popup Spotlight
+              </div>
+              <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                Campus Event Banners & Hackathon Posters Studio
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                These promotional event posters automatically pop up whenever a student logs into the portal. Upload new event flyers, edit details, or toggle visibility anytime.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                onClick={() => {
+                  setEventModalAdminMode(false);
+                  setShowEventPosterModal(true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Preview Student Popup</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEventModalAdminMode(true);
+                  setShowEventPosterModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add / Update Event Posters</span>
+              </button>
+            </div>
+          </div>
+
+          {eventPosters.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {eventPosters.slice(0, 3).map((poster) => (
+                <div
+                  key={poster.poster_id}
+                  onClick={() => {
+                    setEventModalAdminMode(true);
+                    setShowEventPosterModal(true);
+                  }}
+                  className="group cursor-pointer rounded-xl bg-slate-950/70 border border-white/10 hover:border-amber-400/50 p-3 flex items-center gap-3.5 transition-all"
+                >
+                  <img
+                    src={poster.image_url}
+                    alt={poster.title}
+                    className="w-16 h-20 object-cover rounded-lg border border-white/10 shrink-0 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        {poster.category}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          poster.is_active
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {poster.is_active ? 'Active on Login' : 'Hidden'}
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-white truncate">{poster.title}</h4>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{poster.event_date}</p>
+                    <p className="text-[10px] text-amber-400 font-semibold mt-1">
+                      🔥 {poster.rsvp_count || 0} Students Interested
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
 
@@ -780,6 +1013,9 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           </div>
         </div>
 
+        {/* Real-Time Classroom Sentiment & Vibe Meter */}
+        <FacultyVibeMeter />
+
         {/* Faculty Submissions Grading Queue */}
         <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
@@ -1019,8 +1255,26 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
       )
     : null;
 
+  // Academic Attendance Compliance & Recovery Calculations
+  const calcPct = calcTotal > 0 ? (calcAttended / calcTotal) * 100 : 0;
+  const bufferLectures = calcTotal > 0 && calcPct >= 75 ? Math.floor((4 * calcAttended - 3 * calcTotal) / 3) : 0;
+  const classesNeeded = calcTotal > 0 && calcPct < 75 ? Math.max(0, Math.ceil(3 * calcTotal - 4 * calcAttended)) : 0;
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Campus Event Posters Login Spotlight Popup for Student */}
+      <CampusEventPosterModal
+        isOpen={showEventPosterModal}
+        onClose={() => {
+          setShowEventPosterModal(false);
+          loadEventPosters();
+        }}
+        isAdmin={false}
+      />
+
+      {/* Daily Vibe Check-in Pop-up for Student */}
+      <VibeCheckInModal studentId={userId} studentName={profile?.full_name?.split(' ')[0]} />
+
       {/* Student Header Banner with Campus Photo */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm text-white">
         <div
@@ -1047,7 +1301,17 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => {
+                setEventModalAdminMode(false);
+                setShowEventPosterModal(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-rose-950/50 transition-all"
+            >
+              <Flame className="h-4 w-4" />
+              <span>Campus Events ({eventPosters.length || 3})</span>
+            </button>
             <button
               onClick={() => onNavigate('courses')}
               className="btn-primary"
@@ -1066,89 +1330,159 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
         </div>
       </div>
 
-      {/* Student Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Enrolled Courses
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-              <BookOpen className="h-4 w-4" />
+      {/* Live Campus Event Banners & Hackathons Spotlight Strip */}
+      {eventPosters.length > 0 && (
+        <div className="card p-4 sm:p-5 border border-rose-500/20 bg-gradient-to-r from-slate-900 via-slate-900 to-rose-950/80 text-white">
+          <div className="flex items-center justify-between gap-3 mb-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center shrink-0 shadow">
+                <Flame className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>Campus Event Spotlight — Hackathons, Workshops & Auditions</span>
+                  <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Click any poster to view full size
+                  </span>
+                </h2>
+              </div>
             </div>
+            <button
+              onClick={() => {
+                setEventModalAdminMode(false);
+                setShowEventPosterModal(true);
+              }}
+              className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 shrink-0"
+            >
+              <span>Open Poster Carousel</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
-            {courses.length}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Active curriculum subjects</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {eventPosters.slice(0, 3).map((poster) => (
+              <div
+                key={poster.poster_id}
+                onClick={() => {
+                  setEventModalAdminMode(false);
+                  setShowEventPosterModal(true);
+                }}
+                className="group cursor-pointer rounded-xl bg-slate-950/75 border border-white/10 hover:border-amber-400/60 p-3 flex items-center gap-3.5 transition-all hover:shadow-lg"
+              >
+                <img
+                  src={poster.image_url}
+                  alt={poster.title}
+                  className="w-14 h-18 object-cover rounded-lg border border-white/15 shrink-0 group-hover:scale-105 transition-transform"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30 mb-1">
+                    {poster.category}
+                  </span>
+                  <h4 className="text-xs font-bold text-white truncate group-hover:text-amber-300 transition-colors">
+                    {poster.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">{poster.event_date}</p>
+                  <p className="text-[10px] text-amber-400 font-semibold mt-1">
+                    🔥 {poster.rsvp_count || 0} Interested • View Poster →
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3D Holographic Student Badge & Metric Cards Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        {/* Left: 3D Flip Student Badge (4 cols) */}
+        <div className="lg:col-span-5 flex justify-center w-full">
+          <StudentIDCard user={profile || {}} />
         </div>
 
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Pending Tasks
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-              <ClipboardCheck className="h-4 w-4" />
+        {/* Right: Student Metric Cards in 2x2 Grid (7 cols) */}
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Enrolled Courses
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                <BookOpen className="h-4 w-4" />
+              </div>
             </div>
+            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
+              {courses.length}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Active curriculum subjects</p>
           </div>
-          <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
-            {assignments.length}
-          </p>
-          <p className="text-[11px] text-slate-400 mt-0.5">Assignments awaiting submission</p>
-        </div>
 
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Average Score
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-              <Award className="h-4 w-4" />
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Pending Tasks
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                <ClipboardCheck className="h-4 w-4" />
+              </div>
             </div>
+            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
+              {assignments.length}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Assignments awaiting submission</p>
           </div>
-          <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
-            {avgScore !== null ? `${avgScore}%` : 'N/A'}
-          </p>
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
-            {avgScore !== null ? `Grade Point: ${(avgScore / 10).toFixed(1)} / 10` : 'No graded submissions'}
-          </p>
-        </div>
 
-        <div
-          className="card p-5 cursor-pointer hover:border-red-300 dark:hover:border-red-900 transition-colors"
-          onClick={() => onNavigate('attendance')}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Attendance Record
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400">
-              <CalendarCheck className="h-4 w-4" />
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Average Score
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <Award className="h-4 w-4" />
+              </div>
             </div>
+            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
+              {avgScore !== null ? `${avgScore}%` : 'N/A'}
+            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
+              {avgScore !== null ? `Grade Point: ${(avgScore / 10).toFixed(1)} / 10` : 'No graded submissions'}
+            </p>
           </div>
-          <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
-            {attendanceTotalLectures === 0
-              ? '0%'
-              : attendancePercent !== null
-              ? `${attendancePercent}%`
-              : '0%'}
-          </p>
-          <p
-            className={`text-[11px] mt-0.5 font-semibold ${
-              attendanceTotalLectures === 0
-                ? 'text-blue-600 dark:text-blue-400'
-                : (attendancePercent ?? 0) >= 75
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-amber-600 dark:text-amber-400'
-            }`}
+
+          <div
+            className="card p-5 cursor-pointer hover:border-red-300 dark:hover:border-red-900 transition-colors"
+            onClick={() => onNavigate('attendance')}
           >
-            {attendanceTotalLectures === 0
-              ? 'ℹ️ New Student • No sessions recorded yet'
-              : (attendancePercent ?? 0) >= 75
-              ? '✓ UGC 75% Eligibility Met'
-              : '⚠️ Shortage (< 75% Threshold)'}
-          </p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Attendance Record
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400">
+                <CalendarCheck className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
+              {attendanceTotalLectures === 0
+                ? '0%'
+                : attendancePercent !== null
+                ? `${attendancePercent}%`
+                : '0%'}
+            </p>
+            <p
+              className={`text-[11px] mt-0.5 font-semibold ${
+                attendanceTotalLectures === 0
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : (attendancePercent ?? 0) >= 75
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-amber-600 dark:text-amber-400'
+              }`}
+            >
+              {attendanceTotalLectures === 0
+                ? 'ℹ️ New Student • No sessions recorded yet'
+                : (attendancePercent ?? 0) >= 75
+                ? '✓ UGC 75% Eligibility Met'
+                : '⚠️ Shortage (< 75% Threshold)'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1399,52 +1733,344 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             </div>
           </div>
 
-          {/* Today's Timetable */}
-          <div className="card p-6">
+          {/* Real-time Live Class & Next Lecture Alert Card */}
+          <div className="card p-6 border-slate-200 dark:border-slate-800 bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-900/60 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-red-700" />
-                Lecture Timetable
-              </h2>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Live Period & Schedule
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    KL CSE Section {studentSection} • Today ({classStatus.day})
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => onNavigate('liveclasses')}
-                className="text-xs font-semibold text-red-700 dark:text-red-400"
+                onClick={() => onNavigate('timetable')}
+                className="text-xs font-semibold text-red-700 dark:text-red-400 hover:underline flex items-center gap-1"
               >
-                Join Live
+                <span>Full Timetable</span>
+                <ArrowRight className="h-3 w-3" />
               </button>
             </div>
 
-            <div className="space-y-3">
-              {[
-                { time: '09:30 - 11:00 AM', code: 'CS101', name: 'Database Management Systems', room: 'Hall 302' },
-                { time: '11:30 - 01:00 PM', code: 'CS102', name: 'Data Structures & Algorithms', room: 'Lab 4' },
-                { time: '02:00 - 03:30 PM', code: 'CS105', name: 'Computer Networks', room: 'Room 205' },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                        {item.code}
-                      </span>
-                      <span className="font-medium text-slate-900 dark:text-white truncate max-w-[160px]">
-                        {item.name}
+            {/* Current Class / Status */}
+            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/70 mb-3.5 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                  Current Session
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                  {classStatus.currentSlot ? classStatus.currentSlot.displayTime : 'Campus Off-Hours'}
+                </span>
+              </div>
+              {classStatus.currentClass ? (
+                <div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                      {classStatus.currentClass.title}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-red-600 dark:text-red-400 shrink-0">
+                      {classStatus.currentClass.code}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="truncate">Faculty: {classStatus.currentClass.faculty}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-300 shrink-0">
+                      {classStatus.currentClass.room || 'Room 304'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                  No active lecture currently running. Scheduled classes resume at 8:15 AM.
+                </p>
+              )}
+            </div>
+
+            {/* Next Class Banner & 1-Click Alert Button */}
+            <div className="p-3.5 rounded-xl border border-dashed border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/20">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 flex items-center gap-1">
+                  <Bell className="w-3 h-3" />
+                  Upcoming Next Class
+                </span>
+                <span className="text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300">
+                  {classStatus.nextSlot ? classStatus.nextSlot.displayTime : 'Next Working Period'}
+                </span>
+              </div>
+
+              {classStatus.nextClass ? (
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {classStatus.nextClass.title}
+                    </h4>
+                    <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">
+                      {classStatus.nextClass.code}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="truncate">Faculty: {classStatus.nextClass.faculty}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium shrink-0">
+                      {classStatus.nextClass.room || 'Block B - 304'}
+                    </span>
+                  </div>
+
+                  {/* Autonomous Schedule-Time Mobile Alert Status */}
+                  <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                        <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-500" />
+                        <span>Autonomous Mobile Alerts Active</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                        Schedule Basis
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {item.time} • {item.room}
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Alerts dispatch automatically to your mobile 5 minutes before each lecture slot without clicking.
                     </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          setClassAlertLoading(true);
+                          const res = await triggerImmediateMobileAlertTest(profile);
+                          setClassAlertStatus({
+                            success: true,
+                            message: `Auto-alert verified for ${res.title}! Bell sounded and mobile notified.`,
+                          });
+                          setTimeout(() => setClassAlertStatus(null), 6000);
+                        } finally {
+                          setClassAlertLoading(false);
+                        }
+                      }}
+                      disabled={classAlertLoading}
+                      className="w-full py-2 px-3 rounded-lg bg-red-700 hover:bg-red-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow transition active:scale-98 disabled:opacity-50"
+                    >
+                      {classAlertLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Smartphone className="w-3.5 h-3.5" />
+                      )}
+                      <span>Test Mobile Alert & Bell Now</span>
+                    </button>
                   </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">Day schedule completed. All periods cleared.</p>
+              )}
+
+              {/* Status Alert Banner */}
+              {classAlertStatus && (
+                <div
+                  className={`mt-2.5 p-2.5 rounded-lg border text-xs space-y-1.5 ${
+                    classAlertStatus.success
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                      : 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold">
+                    {classAlertStatus.success ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <AlertCircle className="w-3.5 h-3.5 text-red-600" />}
+                    <span>{classAlertStatus.message}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive UGC 75% Exam Clearance Compliance Engine */}
+          <div className="card p-6 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
+                  <Calculator className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    UGC 75% Exam Clearance Compliance Engine
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Official UGC & KL University Examination Clearance Calculator
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${
+                  calcTotal === 0
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                    : calcPct >= 75
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'
+                }`}
+              >
+                {calcTotal === 0 ? 'Fresh Semester' : calcPct >= 75 ? 'Hall Ticket Cleared' : 'Shortage'}
+              </span>
+            </div>
+
+            {/* Interactive Inputs */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                  Attended Classes
+                </label>
+                <div className="flex items-center justify-between">
                   <button
-                    onClick={() => onNavigate('liveclasses')}
-                    className="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+                    type="button"
+                    onClick={() => setCalcAttended((prev) => Math.max(0, prev - 1))}
+                    className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200"
                   >
-                    View
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={calcAttended}
+                    onChange={(e) => {
+                      const val = Math.max(0, parseInt(e.target.value) || 0);
+                      setCalcAttended(val);
+                      if (val > calcTotal) setCalcTotal(val);
+                    }}
+                    className="w-16 text-center font-bold text-base bg-transparent text-slate-900 dark:text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalcAttended((prev) => prev + 1);
+                      if (calcAttended + 1 > calcTotal) setCalcTotal(calcAttended + 1);
+                    }}
+                    className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200"
+                  >
+                    +
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                  Total Conducted
+                </label>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCalcTotal((prev) => Math.max(calcAttended, prev - 1))}
+                    className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min={calcAttended}
+                    value={calcTotal}
+                    onChange={(e) => {
+                      const val = Math.max(calcAttended, parseInt(e.target.value) || 0);
+                      setCalcTotal(val);
+                    }}
+                    className="w-16 text-center font-bold text-base bg-transparent text-slate-900 dark:text-white outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCalcTotal((prev) => prev + 1)}
+                    className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar & Percentage */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Current Ratio: {calcAttended} / {calcTotal} Lectures
+                </span>
+                <span
+                  className={`font-black text-sm ${
+                    calcTotal === 0
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : calcPct >= 75
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}
+                >
+                  {calcTotal === 0 ? '0.0%' : `${calcPct.toFixed(1)}%`}
+                </span>
+              </div>
+              <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    calcTotal === 0
+                      ? 'bg-blue-500'
+                      : calcPct >= 75
+                      ? 'bg-emerald-500'
+                      : calcPct >= 65
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, calcPct))}%` }}
+                />
+                {/* 75% indicator line */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-slate-900/60 dark:bg-white/60 z-10"
+                  style={{ left: '75%' }}
+                  title="75% UGC Minimum Requirement"
+                />
+              </div>
+              <div className="flex justify-between text-[9px] text-slate-400 mt-1">
+                <span>0%</span>
+                <span className="font-bold text-slate-600 dark:text-slate-300">75% UGC Threshold</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            {/* Smart Output Analysis */}
+            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5">
+              {calcTotal === 0 ? (
+                <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                  🌟 <strong>Semester Initialization:</strong> No classes recorded yet. Maintain your attendance above 85% by attending upcoming periods to stay in the dean&apos;s honors list.
+                </div>
+              ) : calcPct >= 75 ? (
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Permissible Buffer: {bufferLectures} Lectures</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                    {bufferLectures > 0
+                      ? `Your attendance safely satisfies UGC norms with a compliance cushion of ${bufferLectures} lecture${bufferLectures > 1 ? 's' : ''} while maintaining at least 75% attendance for examination hall ticket eligibility.`
+                      : 'You are right at the 75% threshold! Missing the next class will put you into attendance shortage.'}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-400">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Attendance Shortage: Attend Next {classesNeeded} Lectures</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                    You must attend the next <strong>{classesNeeded}</strong> consecutive class{classesNeeded > 1 ? 'es' : ''} without any absence to recover to 75% exam clearance eligibility.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 text-right">
+              <button
+                onClick={() => onNavigate('attendance')}
+                className="text-xs font-bold text-red-700 dark:text-red-400 hover:underline inline-flex items-center gap-1"
+              >
+                <span>Full Attendance Ledger</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>

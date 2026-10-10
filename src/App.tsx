@@ -21,8 +21,12 @@ import StudentsPage from '@/pages/StudentsPage';
 import FacultyPage from '@/pages/FacultyPage';
 import AttendancePage from '@/pages/AttendancePage';
 import ExamsPage from '@/pages/ExamsPage';
+import TimetablePage from '@/pages/TimetablePage';
+import ParentSnapshotModal from '@/components/ParentSnapshotModal';
+import ParentPortalPage from '@/components/ParentPortalPage';
 
-import { Loader2, Bot } from 'lucide-react';
+import { Loader2, Bot, Bell, Volume2, X, Clock } from 'lucide-react';
+import { initAutonomousScheduleNotifier, type AutoAlertPayload } from '@/services/scheduleNotifier';
 
 const API_URL = 'http://localhost:5001';
 
@@ -32,6 +36,17 @@ export default function App() {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [unreadCount, setUnreadCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [liveScheduleAlert, setLiveScheduleAlert] = useState<AutoAlertPayload | null>(null);
+
+  // Direct Parent Portal URL access (when scanning QR code with camera: /?parent_pin=...)
+  const [parentUrlPin, setParentUrlPin] = useState<string | null>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('parent_pin') || params.get('pin') || null;
+    } catch {
+      return null;
+    }
+  });
 
   // Whenever a new account or session logs in, reset view directly to the dashboard
   useEffect(() => {
@@ -39,6 +54,17 @@ export default function App() {
       setActivePage('dashboard');
     }
   }, [profile?.id]);
+
+  // Autonomous Mobile Schedule Alert Engine (Listens on schedule time basis without clicks)
+  useEffect(() => {
+    if (!profile) return;
+    const cleanup = initAutonomousScheduleNotifier(profile, (payload) => {
+      setLiveScheduleAlert(payload);
+      fetchUnread();
+      setTimeout(() => setLiveScheduleAlert(null), 12000);
+    });
+    return cleanup;
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -94,6 +120,11 @@ export default function App() {
     );
   }
 
+  // Standalone Parent Access (via QR Code scan or direct link ?parent_pin=...)
+  if (parentUrlPin !== null || (typeof window !== 'undefined' && window.location.pathname === '/parent-portal')) {
+    return <ParentPortalPage pin={parentUrlPin} onExit={() => setParentUrlPin(null)} />;
+  }
+
   if (!session || !profile) {
     return <AuthPage />;
   }
@@ -102,6 +133,9 @@ export default function App() {
     switch (activePage) {
       case 'dashboard':
         return <DashboardPage onNavigate={handleNavigate} />;
+
+      case 'timetable':
+        return <TimetablePage />;
 
       case 'courses':
         return <CoursesPage />;
@@ -216,6 +250,43 @@ export default function App() {
           </span>
         </button>
       </div>
+      {/* Live Autonomous Schedule Alert Banner (Auto-triggers on schedule time basis) */}
+      {liveScheduleAlert && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-lg p-4 rounded-2xl bg-gradient-to-r from-red-900 via-slate-900 to-slate-950 text-white shadow-2xl border border-red-500/50 animate-fade-in flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow">
+              <Bell className="w-5 h-5 animate-pulse text-amber-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
+                  Upcoming Period in {liveScheduleAlert.leadMinutes} mins
+                </span>
+                <span className="text-[10px] text-slate-400">{liveScheduleAlert.time}</span>
+              </div>
+              <h4 className="text-sm font-bold text-white mt-0.5">{liveScheduleAlert.title}</h4>
+              <p className="text-xs text-slate-300">
+                Venue: <strong>{liveScheduleAlert.room}</strong> • Faculty: {liveScheduleAlert.faculty}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLiveScheduleAlert(null)}
+            className="p-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Direct Parent Snapshot Modal (from QR scan / query param) */}
+      {parentUrlPin && (
+        <ParentSnapshotModal
+          pinOrRoll={parentUrlPin}
+          onClose={() => setParentUrlPin(null)}
+        />
+      )}
     </div>
   );
 }

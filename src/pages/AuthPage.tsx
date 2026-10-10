@@ -220,7 +220,7 @@ export default function AuthPage() {
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <span>Admin access is restricted to the single authorized account (admin@klh.edu.in).</span>
+                <span>Administrator registration is restricted to authorized university personnel.</span>
               </div>
             </div>
           )}
@@ -238,7 +238,7 @@ export default function AuthPage() {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Shloka Reddy"
+                    placeholder="Enter your full name"
                     className="input-field pl-10"
                   />
                 </div>
@@ -247,11 +247,7 @@ export default function AuthPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {mode === 'signup'
-                  ? role === 'student'
-                    ? 'Student Institutional Email (rollnumber@klh.edu.in)'
-                    : 'Faculty Institutional Email (fac[EmpID]@klh.edu.in)'
-                  : 'Institutional Email'}
+                Institutional Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -260,23 +256,10 @@ export default function AuthPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={
-                    mode === 'signin'
-                      ? '2200030001@klh.edu.in, fac10342@klh.edu.in, or admin@klh.edu.in'
-                      : role === 'student'
-                      ? '2200030001@klh.edu.in'
-                      : 'fac10342@klh.edu.in'
-                  }
+                  placeholder="Enter your institutional email"
                   className="input-field pl-10"
                 />
               </div>
-              {mode === 'signup' && (
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                  {role === 'student'
-                    ? 'Format: [Roll Number]@klh.edu.in (e.g. 2200030001@klh.edu.in)'
-                    : 'Format: fac[Employee ID]@klh.edu.in (e.g. fac10342@klh.edu.in)'}
-                </p>
-              )}
             </div>
 
             <div>
@@ -290,7 +273,7 @@ export default function AuthPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password (e.g. 123 or 1234)"
+                  placeholder="Enter your password"
                   className="input-field pl-10"
                 />
               </div>
@@ -324,56 +307,6 @@ export default function AuthPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Institutional Demo Logins */}
-          <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider text-center">
-              Quick Institutional Demo Accounts
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('signin');
-                  setEmail('2200030001@klh.edu.in');
-                  setPassword('student123');
-                  setError(null);
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-red-500 dark:hover:border-red-500 transition shadow-sm group"
-              >
-                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 truncate">🎓 Student</div>
-                <div className="text-[9.5px] font-mono text-slate-400 truncate">2200030001@klh.edu.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('signin');
-                  setEmail('fac10342@klh.edu.in');
-                  setPassword('faculty123');
-                  setError(null);
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-red-500 dark:hover:border-red-500 transition shadow-sm group"
-              >
-                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 truncate">👨‍🏫 Faculty</div>
-                <div className="text-[9.5px] font-mono text-slate-400 truncate">fac10342@klh.edu.in</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('signin');
-                  setEmail('admin@klh.edu.in');
-                  setPassword('admin123');
-                  setError(null);
-                }}
-                className="p-2 text-left rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-red-500 dark:hover:border-red-500 transition shadow-sm group"
-              >
-                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 truncate">🛡️ Admin (1 Only)</div>
-                <div className="text-[9.5px] font-mono text-slate-400 truncate">admin@klh.edu.in</div>
-              </button>
-            </div>
-          </div>
 
           <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-5">
             {mode === 'signin' ? "Don't have an account yet? " : 'Already registered with university ID? '}

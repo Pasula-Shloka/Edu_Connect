@@ -4,7 +4,7 @@ import type { PageKey } from '@/components/Sidebar';
 import StudentIDCard from '@/components/StudentIDCard';
 import VibeCheckInModal from '@/components/VibeCheckInModal';
 import FacultyVibeMeter from '@/components/FacultyVibeMeter';
-import CampusEventPosterModal, { type EventPoster } from '@/components/CampusEventPosterModal';
+import CampusEventPosterModal, { type EventPoster, resolvePosterUrl } from '@/components/CampusEventPosterModal';
 import {
   BookOpen,
   ClipboardCheck,
@@ -521,7 +521,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                   className="group cursor-pointer rounded-xl bg-slate-950/70 border border-white/10 hover:border-amber-400/50 p-3 flex items-center gap-3.5 transition-all"
                 >
                   <img
-                    src={poster.image_url}
+                    src={resolvePosterUrl(poster.image_url)}
                     alt={poster.title}
                     className="w-16 h-20 object-cover rounded-lg border border-white/10 shrink-0 group-hover:scale-105 transition-transform"
                   />
@@ -1370,7 +1370,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                 className="group cursor-pointer rounded-xl bg-slate-950/75 border border-white/10 hover:border-amber-400/60 p-3 flex items-center gap-3.5 transition-all hover:shadow-lg"
               >
                 <img
-                  src={poster.image_url}
+                  src={resolvePosterUrl(poster.image_url)}
                   alt={poster.title}
                   className="w-14 h-18 object-cover rounded-lg border border-white/15 shrink-0 group-hover:scale-105 transition-transform"
                 />

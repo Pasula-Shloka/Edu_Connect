@@ -2720,7 +2720,7 @@ async function ensureEventPostersTable() {
                 '12 – 13 October 2026 (24 Hours)',
                 'Campus Innovation Hub (Team Size: 3–5 Members)',
                 'Ideate, Innovate, Collaborate & Create Real Impact! Tracks: 1) AI & Smart Campus Solutions, 2) CleanTech & Environmental Sustainability, 3) Healthcare & Assistive Technology. Free Registration for all UG & PG students.',
-                '/posters/ieee-hackathon.jpg',
+                './posters/ieee-hackathon.jpg',
                 'https://ieeeday.org',
                 'AVINYA 2K26 — Dance Club Auditions',
                 'KLH University • Student Activity Centre (SAC)',
@@ -2728,7 +2728,7 @@ async function ensureEventPostersTable() {
                 'Auditions: 12th October 2026 (Reg closes 11th Oct)',
                 'SAC Auditorium, KLH Aziz Nagar Campus',
                 'Feel the Beat. Own the Stage! KLH University Student Activity Centre Dance Club invites passionate dancers for Avinya 2K26 auditions. Scan the QR code on the poster or click Register to secure your slot.',
-                '/posters/avinya-dance.jpg',
+                './posters/avinya-dance.jpg',
                 '',
                 'IEEE DAY 2026 — Canva Design Workshop',
                 'KLH Aziz Nagar Campus • IEEE SB KLH',
@@ -2736,10 +2736,12 @@ async function ensureEventPostersTable() {
                 '6 October 2026 | 10:00 AM – 12:00 PM',
                 'Open Auditorium, KLH Aziz Nagar Campus',
                 'Together for a Brighter Tomorrow: Innovation • Community • Global Impact. Join our hands-on Canva Workshop to learn, create, and make an impact.',
-                '/posters/ieee-canva-workshop.jpg',
+                './posters/ieee-canva-workshop.jpg',
                 ''
             ]
         );
+    } else {
+        await pool.query(`UPDATE event_posters SET image_url = '.' || image_url WHERE image_url LIKE '/posters/%'`);
     }
     eventPostersTableReady = true;
 }

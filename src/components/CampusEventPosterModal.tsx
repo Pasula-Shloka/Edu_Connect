@@ -50,6 +50,14 @@ const API_BASE =
     ? `http://${window.location.hostname}:5001`
     : 'http://localhost:5001';
 
+export function resolvePosterUrl(url?: string): string {
+  if (!url) return './posters/ieee-hackathon.jpg';
+  if (url.startsWith('/posters/')) {
+    return `.${url}`;
+  }
+  return url;
+}
+
 const FALLBACK_POSTERS: EventPoster[] = [
   {
     poster_id: 1,
@@ -60,7 +68,7 @@ const FALLBACK_POSTERS: EventPoster[] = [
     venue: 'Campus Innovation Hub (Team Size: 3–5 Members)',
     description:
       'Ideate, Innovate, Collaborate & Create Real Impact! Tracks: 1) AI & Smart Campus Solutions, 2) CleanTech & Environmental Sustainability, 3) Healthcare & Assistive Technology. Free Registration for all UG & PG students.',
-    image_url: '/posters/ieee-hackathon.jpg',
+    image_url: './posters/ieee-hackathon.jpg',
     registration_link: '',
     is_active: true,
     rsvp_count: 48,
@@ -75,7 +83,7 @@ const FALLBACK_POSTERS: EventPoster[] = [
     venue: 'SAC Auditorium, KLH Aziz Nagar Campus',
     description:
       'Feel the Beat. Own the Stage! KLH University Student Activity Centre Dance Club invites passionate dancers for Avinya 2K26 auditions. Scan the QR code on the poster or click Register to secure your slot.',
-    image_url: '/posters/avinya-dance.jpg',
+    image_url: './posters/avinya-dance.jpg',
     registration_link: '',
     is_active: true,
     rsvp_count: 64,
@@ -90,7 +98,7 @@ const FALLBACK_POSTERS: EventPoster[] = [
     venue: 'Open Auditorium, KLH Aziz Nagar Campus',
     description:
       'Together for a Brighter Tomorrow: Innovation • Community • Global Impact. Join our hands-on Canva Workshop to learn, create, and make an impact.',
-    image_url: '/posters/ieee-canva-workshop.jpg',
+    image_url: './posters/ieee-canva-workshop.jpg',
     registration_link: '',
     is_active: true,
     rsvp_count: 39,
@@ -479,7 +487,7 @@ export default function CampusEventPosterModal({
                   </div>
                   {formData.image_url && (
                     <div className="mt-2 relative h-32 rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
-                      <img src={formData.image_url} alt="Preview" className="max-h-full max-w-full object-contain" />
+                      <img src={resolvePosterUrl(formData.image_url)} alt="Preview" className="max-h-full max-w-full object-contain" />
                     </div>
                   )}
                 </div>
@@ -554,7 +562,7 @@ export default function CampusEventPosterModal({
                     }`}
                   >
                     <img
-                      src={poster.image_url}
+                      src={resolvePosterUrl(poster.image_url)}
                       alt={poster.title}
                       className="w-20 h-24 object-cover rounded-xl border border-slate-700 shrink-0 bg-slate-900"
                     />
@@ -625,7 +633,7 @@ export default function CampusEventPosterModal({
               ) : (
                 <>
                   <img
-                    src={currentPoster.image_url}
+                    src={resolvePosterUrl(currentPoster.image_url)}
                     alt={currentPoster.title}
                     className="max-h-[64vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl border border-white/10 transition-all duration-300"
                   />
@@ -723,7 +731,7 @@ export default function CampusEventPosterModal({
                               : 'border-slate-700 opacity-60 hover:opacity-100'
                           }`}
                         >
-                          <img src={p.image_url} alt={p.title} className="w-14 h-16 object-cover" />
+                          <img src={resolvePosterUrl(p.image_url)} alt={p.title} className="w-14 h-16 object-cover" />
                         </button>
                       ))}
                     </div>

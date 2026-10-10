@@ -965,6 +965,136 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     }
   }
 
+  // 13. CAMPUS EVENT POSTERS & LOGIN SPOTLIGHT (STANDALONE / GITHUB PAGES)
+  if (path.includes('/api/event-posters')) {
+    const STORAGE_KEY = 'kl_educonnect_event_posters_v1';
+    const defaultPosters = [
+      {
+        poster_id: 1,
+        title: '24 Hours Hackathon — "Tech For Good"',
+        organizer: 'IEEE Student Branch • IEEE Day Celebration',
+        category: 'Hackathon',
+        event_date: '12 – 13 October 2026 (24 Hours)',
+        venue: 'Campus Innovation Hub (Team Size: 3–5 Members)',
+        description:
+          'Ideate, Innovate, Collaborate & Create Real Impact! Tracks: 1) AI & Smart Campus Solutions, 2) CleanTech & Environmental Sustainability, 3) Healthcare & Assistive Technology. Free Registration for all UG & PG students.',
+        image_url: './posters/ieee-hackathon.jpg',
+        registration_link: 'https://ieeeday.org',
+        is_active: true,
+        rsvp_count: 48,
+        display_order: 1,
+      },
+      {
+        poster_id: 2,
+        title: 'AVINYA 2K26 — Dance Auditions',
+        organizer: 'KLH University • Student Activity Centre (SAC) – Dance Club',
+        category: 'Cultural & Dance',
+        event_date: '5th October 2026 (Reg closes 4th Oct)',
+        venue: 'KLH University SAC Auditorium',
+        description:
+          'Feel the Beat. Own the Stage! KLH University Student Activity Centre Dance Club invites passionate dancers for Avinya 2K26 auditions. Scan the QR code on the poster or click Register below.',
+        image_url: './posters/avinya-dance.jpg',
+        registration_link: 'https://klh.edu.in',
+        is_active: true,
+        rsvp_count: 64,
+        display_order: 2,
+      },
+      {
+        poster_id: 3,
+        title: 'IEEE DAY 2026 — Canva Workshop',
+        organizer: 'KLH Aziz Nagar Campus • IEEE SB KLH',
+        category: 'Workshop',
+        event_date: '9 October 2026 | 10:00 AM – 12:00 PM',
+        venue: 'Open Auditorium, KLH Aziz Nagar Campus',
+        description:
+          'Together for a Brighter Tomorrow: Innovation • Community • Global Impact. Hands-on Canva Design Workshop to learn, create, and make an impact.',
+        image_url: './posters/ieee-canva-workshop.jpg',
+        registration_link: 'https://ieeeday.org',
+        is_active: true,
+        rsvp_count: 39,
+        display_order: 3,
+      },
+    ];
+
+    let storedPosters = defaultPosters;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          storedPosters = parsed.map((p: any) => ({
+            ...p,
+            image_url: typeof p.image_url === 'string' && p.image_url.startsWith('/posters/') ? `.${p.image_url}` : p.image_url,
+          }));
+        }
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultPosters));
+      }
+    } catch {}
+
+    if (method === 'GET') {
+      const activeOnly = url.searchParams.get('activeOnly') === 'true';
+      const list = activeOnly ? storedPosters.filter((p) => p.is_active !== false) : storedPosters;
+      return jsonResponse(list);
+    }
+
+    if (method === 'POST' && path.endsWith('/rsvp')) {
+      const match = path.match(/\/api\/event-posters\/(\d+)\/rsvp/);
+      const id = match ? Number(match[1]) : 1;
+      storedPosters = storedPosters.map((p) =>
+        p.poster_id === id ? { ...p, rsvp_count: (p.rsvp_count || 0) + 1 } : p
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPosters));
+      } catch {}
+      const updated = storedPosters.find((p) => p.poster_id === id) || storedPosters[0];
+      return jsonResponse({ message: 'Interest registered!', poster: updated });
+    }
+
+    if (method === 'POST') {
+      const newPoster = {
+        poster_id: Date.now(),
+        title: body.title || 'Campus Event',
+        organizer: body.organizer || 'KLH University',
+        category: body.category || 'Campus Event',
+        event_date: body.event_date || 'Upcoming',
+        venue: body.venue || 'KLH Aziz Nagar Campus',
+        description: body.description || '',
+        image_url: body.image_url || './posters/ieee-hackathon.jpg',
+        registration_link: body.registration_link || '',
+        is_active: body.is_active !== false,
+        rsvp_count: 1,
+        display_order: body.display_order || storedPosters.length + 1,
+      };
+      storedPosters = [newPoster, ...storedPosters];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPosters));
+      } catch {}
+      return jsonResponse({ message: 'Event poster published successfully', poster: newPoster }, 201);
+    }
+
+    if (method === 'PUT') {
+      const match = path.match(/\/api\/event-posters\/(\d+)/);
+      const id = match ? Number(match[1]) : 0;
+      storedPosters = storedPosters.map((p) => (p.poster_id === id ? { ...p, ...body } : p));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPosters));
+      } catch {}
+      const updated = storedPosters.find((p) => p.poster_id === id);
+      return jsonResponse({ message: 'Event poster updated', poster: updated });
+    }
+
+    if (method === 'DELETE') {
+      const match = path.match(/\/api\/event-posters\/(\d+)/);
+      const id = match ? Number(match[1]) : 0;
+      storedPosters = storedPosters.filter((p) => p.poster_id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPosters));
+      } catch {}
+      return jsonResponse({ message: 'Event poster deleted successfully' });
+    }
+  }
+
   // Safe fallback: Return array for GET requests so .map() or Array.isArray() never crashes
   if (method === 'GET') {
     return jsonResponse([]);

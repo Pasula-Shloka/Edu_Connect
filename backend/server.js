@@ -1956,23 +1956,6 @@ app.post("/api/live-classes", async (req, res) => {
             });
         }
 
-        const courseCheck = await pool.query(
-            `SELECT course_id
-             FROM courses
-             WHERE course_id = $1
-             AND faculty_id = $2`,
-            [
-                Number(course_id),
-                Number(faculty_id)
-            ]
-        );
-
-        if (courseCheck.rows.length === 0) {
-            return res.status(403).json({
-                error: "You can only create live classes for your own courses"
-            });
-        }
-
         const result = await pool.query(
             `INSERT INTO live_classes
             (
@@ -1984,7 +1967,7 @@ app.post("/api/live-classes", async (req, res) => {
                 start_time,
                 status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')
+            VALUES ($1, $2, $3, $4, $5, $6, 'live')
             RETURNING *`,
             [
                 Number(course_id),

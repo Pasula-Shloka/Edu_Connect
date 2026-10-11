@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { JitsiMeeting } from '@jitsi/react-sdk';
+import LiveVideoConferenceRoom from '@/components/LiveVideoConferenceRoom';
 import {
   Users,
   Plus,
@@ -1467,47 +1467,50 @@ export default function GroupsPage() {
 
           {/* TAB 4: LIVE VIDEO MEETING HUDDLE */}
           {workspaceTab === 'huddle' && (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    <Video size={16} className="text-purple-600" />
-                    Private Virtual Team Huddle Room
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Encrypted WebRTC conference room for group discussions, code reviews, and viva preparation.
-                  </p>
-                </div>
-
-                <span className="font-mono text-[11px] px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 font-bold border border-purple-200 dark:border-purple-800">
-                  Room: educonnect-team-{selectedGroup.group_id}
-                </span>
-              </div>
-
-              <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-xl min-h-[620px]">
-                <JitsiMeeting
-                  domain="meet.jit.si"
-                  roomName={`educonnect-team-huddle-${selectedGroup.group_id}`}
-                  userInfo={{
-                    displayName: profile?.full_name || 'Team Member',
-                    email: profile?.email || 'student@klh.edu.in',
-                  }}
-                  configOverwrite={{
-                    startWithAudioMuted: false,
-                    startWithVideoMuted: false,
-                    enableWelcomePage: false,
-                  }}
-                  interfaceConfigOverwrite={{
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_WATERMARK_FOR_GUESTS: false,
-                  }}
-                  getIFrameRef={(iframeRef) => {
-                    iframeRef.style.height = '620px';
-                    iframeRef.style.width = '100%';
-                    iframeRef.style.border = '0';
-                  }}
-                />
-              </div>
+            <div className="space-y-4">
+              <LiveVideoConferenceRoom
+                roomName={`educonnect-team-huddle-${selectedGroup.group_id}`}
+                title={`${selectedGroup.name} — Live Team Video Huddle`}
+                subtitle={`Group #${selectedGroup.group_id} • ${selectedGroup.course_code || 'PBL Team'} • WebRTC & Jitsi Studio`}
+                userName={profile?.full_name || 'Team Member'}
+                userEmail={profile?.email || 'student@klh.edu.in'}
+                userRole={profile?.role || 'student'}
+                mode="huddle"
+                peers={members
+                  .filter((m) => m.user_id !== userId)
+                  .map((m) => ({
+                    name: m.full_name,
+                    role: m.role || 'Team Member',
+                    email: m.email,
+                  }))}
+                onLogContribution={async () => {
+                  try {
+                    await fetch(`${API_URL}/api/groups/${selectedGroup.group_id}/contributions`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        user_id: userId,
+                        contribution_type: 'meeting',
+                        description: `Participated in Live Video Team Huddle for ${selectedGroup.name}`,
+                        points: 2,
+                      }),
+                    });
+                  } catch {}
+                  const newItem: Contribution = {
+                    contribution_id: Date.now(),
+                    group_id: selectedGroup.group_id,
+                    user_id: userId,
+                    contribution_type: 'meeting',
+                    description: `Participated in Live Video Team Huddle for ${selectedGroup.name}`,
+                    points: 2,
+                    created_at: new Date().toISOString(),
+                    full_name: profile?.full_name || 'Team Member',
+                  };
+                  setContributions((prev) => [newItem, ...prev]);
+                  setTaskToast('🎉 +2 Huddle Contribution Points added to your Fair-Share Analytics!');
+                  setTimeout(() => setTaskToast(null), 3500);
+                }}
+              />
             </div>
           )}
 

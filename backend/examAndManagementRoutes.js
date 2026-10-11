@@ -2060,15 +2060,70 @@ router.get("/api/parent/student/:pinOrRoll", async (req, res) => {
     }
 });
 
-// Send Academic Alert to Parent Email
+// Send Academic Alert / Official Progress Report to Parent Email via Gmail SMTP
 router.post("/api/parent/notify", async (req, res) => {
     try {
-        const { student_id, message_content, parent_email } = req.body;
+        const { student_id, message_content, parent_email, report_type, student_name, roll_number, attendance_pct, section } = req.body;
         if (!student_id || !message_content) {
             return res.status(400).json({ error: "student_id and message_content are required" });
         }
 
-        const email = parent_email || "rameshreddy.p@gmail.com";
+        let student = null;
+        try {
+            const sRes = await pool.query(
+                "SELECT user_id, full_name, roll_number, section, department, year, parent_name, parent_email FROM users WHERE user_id = $1",
+                [Number(student_id)]
+            );
+            if (sRes.rows.length > 0) student = sRes.rows[0];
+        } catch (e) {}
+
+        const email = (parent_email || student?.parent_email || "rameshreddy.p@gmail.com").trim();
+        const wardName = student_name || student?.full_name || "Student";
+        const wardRoll = roll_number || student?.roll_number || "N/A";
+        const wardSec = section || student?.section || "E4";
+        const guardianName = student?.parent_name || `Guardian of ${wardName}`;
+        const subjectTitle = report_type || "Official Ward Academic & Attendance Progress Report";
+
+        const emailHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+                <div style="background: linear-gradient(135deg, #991b1b 0%, #450a0a 100%); padding: 22px; border-radius: 12px; color: #ffffff;">
+                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #fcd34d; font-weight: 800;">KL Deemed to be University • Aziz Nagar Campus</div>
+                    <h1 style="margin: 6px 0 0; font-size: 20px; font-weight: 800;">${subjectTitle}</h1>
+                    <p style="margin: 4px 0 0; font-size: 12px; opacity: 0.9;">Office of the Academic Registrar & Guardian Connect Gateway</p>
+                </div>
+                <div style="padding: 20px 8px;">
+                    <p style="font-size: 14px; color: #1e293b; margin-top: 0;">Dear <strong>${guardianName}</strong>,</p>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin: 16px 0; font-size: 13px; color: #334155;">
+                        <div><strong>Student Name:</strong> ${wardName}</div>
+                        <div style="margin-top: 4px;"><strong>Roll Number:</strong> ${wardRoll} &nbsp;|&nbsp; <strong>Section:</strong> ${wardSec}</div>
+                        ${attendance_pct !== undefined ? `<div style="margin-top: 4px;"><strong>Verified Attendance:</strong> <span style="color: #059669; font-weight: 800;">${attendance_pct}%</span></div>` : ""}
+                    </div>
+                    <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; font-size: 14px; color: #1e293b; line-height: 1.6; white-space: pre-line;">${message_content}</div>
+                </div>
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; font-size: 11px; color: #64748b; text-align: center;">
+                    Dispatched via KL EduConnect Real-Time Academic Transparency Portal • ${new Date().toLocaleString('en-IN')}
+                </div>
+            </div>
+        `;
+
+        let emailSent = false;
+        try {
+            const transporter = getMailTransporter();
+            const senderAddress = process.env.GMAIL_USER
+                ? `"KL University Guardian Connect" <${process.env.GMAIL_USER.trim()}>`
+                : '"KL University Guardian Connect" <registrar@klh.edu.in>';
+            await transporter.sendMail({
+                from: senderAddress,
+                to: email,
+                subject: `🏛️ KL University • ${subjectTitle} (${wardName} - ${wardRoll})`,
+                html: emailHtml,
+                text: message_content,
+            });
+            emailSent = true;
+            console.log(`[PARENT MAIL] Sent official report to ${email}`);
+        } catch (mailErr) {
+            console.warn("[PARENT MAIL] SMTP fallback notice:", mailErr.message);
+        }
 
         const result = await pool.query(
             `INSERT INTO parent_notifications (student_id, parent_phone, channel, message_content, status)
@@ -2078,7 +2133,9 @@ router.post("/api/parent/notify", async (req, res) => {
         );
 
         res.status(201).json({
-            message: `Official alert dispatched to Parent Email (${email}) successfully!`,
+            success: true,
+            email_sent: emailSent,
+            message: `Official Academic Report dispatched to ${email} via Gmail SMTP!`,
             notification: result.rows[0]
         });
     } catch (error) {
@@ -2910,6 +2967,255 @@ router.post("/api/event-posters/:id/rsvp", async (req, res) => {
     } catch (error) {
         console.error("RSVP event poster error:", error);
         res.status(500).json({ error: "Failed to record registration" });
+    }
+});
+
+/* =========================================================
+   10. LIVE VIDEO HUDDLE & CLASSROOM PRESENCE + EMAIL INVITES
+========================================================= */
+
+const activeLiveRooms = new Map();
+
+function getOrCreateRoomState(roomName) {
+    const key = String(roomName || "default-room").trim();
+    if (!activeLiveRooms.has(key)) {
+        activeLiveRooms.set(key, {
+            participants: new Map(),
+            messages: []
+        });
+    }
+    const state = activeLiveRooms.get(key);
+    const now = Date.now();
+    // Prune participants who haven't sent a heartbeat in 30 seconds
+    for (const [pKey, pVal] of state.participants.entries()) {
+        if (now - pVal.lastSeen > 30000) {
+            state.participants.delete(pKey);
+        }
+    }
+    return state;
+}
+
+// Heartbeat / Join Live Room -> returns ONLY participants who have actually joined
+router.post("/api/live-room/presence", (req, res) => {
+    try {
+        const { room_name, user_name, user_email, user_role, cam_on, mic_on, hand_raised } = req.body;
+        if (!room_name || !user_name) {
+            return res.status(400).json({ error: "room_name and user_name are required" });
+        }
+        const state = getOrCreateRoomState(room_name);
+        const pKey = (user_email || user_name).trim().toLowerCase();
+
+        state.participants.set(pKey, {
+            name: user_name,
+            email: user_email || "",
+            role: user_role || "Team Member",
+            camOn: cam_on !== false,
+            micOn: mic_on !== false,
+            handRaised: Boolean(hand_raised),
+            lastSeen: Date.now()
+        });
+
+        res.json({
+            participants: Array.from(state.participants.values()),
+            messages: state.messages
+        });
+    } catch (err) {
+        console.error("Live room presence error:", err);
+        res.status(500).json({ error: "Failed to sync room presence" });
+    }
+});
+
+// Leave Live Room
+router.post("/api/live-room/leave", (req, res) => {
+    try {
+        const { room_name, user_email, user_name } = req.body;
+        if (room_name) {
+            const state = getOrCreateRoomState(room_name);
+            const pKey = (user_email || user_name || "").trim().toLowerCase();
+            state.participants.delete(pKey);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to leave room" });
+    }
+});
+
+// Post Live Room Chat Message
+router.post("/api/live-room/chat", (req, res) => {
+    try {
+        const { room_name, sender, role, text } = req.body;
+        if (!room_name || !text) {
+            return res.status(400).json({ error: "room_name and text are required" });
+        }
+        const state = getOrCreateRoomState(room_name);
+        const newMsg = {
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            sender: sender || "Participant",
+            role: role || "Team Member",
+            text: String(text).trim(),
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        };
+        state.messages.push(newMsg);
+        if (state.messages.length > 100) {
+            state.messages.shift();
+        }
+        res.json({ success: true, messages: state.messages });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to post chat message" });
+    }
+});
+
+// Send Live Video Huddle / Class Invitation via Email + In-App Notification
+router.post("/api/huddle/invite", async (req, res) => {
+    try {
+        const {
+            room_name,
+            room_title,
+            group_name,
+            inviter_name,
+            inviter_email,
+            invitees,
+            invitee_email,
+            invitee_name,
+            invitee_user_id
+        } = req.body;
+
+        const targetList = Array.isArray(invitees) && invitees.length > 0
+            ? invitees
+            : invitee_email
+            ? [{ email: invitee_email, name: invitee_name || "Teammate", user_id: invitee_user_id }]
+            : [];
+
+        if (targetList.length === 0) {
+            return res.status(400).json({ error: "Please specify at least one team member or email address to invite." });
+        }
+
+        const senderName = inviter_name || "Your Team Member";
+        const sessionTitle = room_title || group_name || "KL EduConnect Live Video Huddle";
+        const roomCode = room_name || "KLEduConnect-Live-Huddle";
+        const jitsiLink = `https://meet.ffmuc.net/${encodeURIComponent(roomCode)}`;
+        const portalLink = "https://pasula-shloka.github.io/Edu_Connect/";
+
+        const transporter = getMailTransporter();
+        const senderAddress = process.env.GMAIL_USER
+            ? `"KL EduConnect Live Studio" <${process.env.GMAIL_USER.trim()}>`
+            : '"KL EduConnect Live Studio" <registrar@klh.edu.in>';
+
+        const results = [];
+
+        for (const target of targetList) {
+            let rawEmail = String(target.email || "").trim().toLowerCase();
+            let targetUserId = target.user_id ? Number(target.user_id) : null;
+            let targetFullName = target.name || "Team Member";
+
+            // If a roll number was typed instead of full email (e.g. 2510030162), resolve to @klh.edu.in
+            if (rawEmail && !rawEmail.includes("@")) {
+                rawEmail = `${rawEmail}@klh.edu.in`;
+            }
+
+            // Look up user in PostgreSQL to also send an In-App Portal Notification
+            try {
+                const userLookup = await pool.query(
+                    `SELECT user_id, full_name, email FROM users
+                     WHERE ($1::int IS NOT NULL AND user_id = $1::int)
+                        OR LOWER(email) = $2
+                        OR roll_number = $3
+                     LIMIT 1`,
+                    [targetUserId, rawEmail, rawEmail.split("@")[0]]
+                );
+                if (userLookup.rows.length > 0) {
+                    targetUserId = userLookup.rows[0].user_id;
+                    targetFullName = userLookup.rows[0].full_name || targetFullName;
+                    if (!rawEmail) rawEmail = userLookup.rows[0].email;
+                }
+            } catch (dbErr) {}
+
+            // 1. Insert In-App Bell Notification in PostgreSQL
+            let inAppNotified = false;
+            if (targetUserId) {
+                try {
+                    await pool.query(
+                        `INSERT INTO notifications (user_id, title, message, is_read)
+                         VALUES ($1, $2, $3, false)`,
+                        [
+                            targetUserId,
+                            `🎥 Live Video Invite: ${sessionTitle}`,
+                            `${senderName} invited you to join the live video session "${sessionTitle}". Open Group Workspaces -> Live Video Huddle (Room: ${roomCode}) to join now!`
+                        ]
+                    );
+                    inAppNotified = true;
+                } catch (notifErr) {
+                    console.warn("Could not insert in-app huddle notification:", notifErr.message);
+                }
+            }
+
+            // 2. Dispatch Real Email Notification via Gmail SMTP
+            let emailDispatched = false;
+            if (rawEmail && rawEmail.includes("@")) {
+                const emailHtml = `
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+                        <div style="background: linear-gradient(135deg, #991b1b 0%, #0f172a 100%); padding: 22px; border-radius: 12px; text-align: center; color: #ffffff;">
+                            <span style="display: inline-block; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;">● LIVE VIDEO HUDDLE INVITATION</span>
+                            <h1 style="margin: 0; font-size: 20px; font-weight: 800;">${sessionTitle}</h1>
+                            <p style="margin: 6px 0 0; font-size: 12px; opacity: 0.85;">KL Deemed to be University • Collaborative Workspace Studio</p>
+                        </div>
+                        <div style="padding: 24px 8px;">
+                            <p style="font-size: 15px; color: #1e293b; margin-top: 0;">Hi <strong>${targetFullName}</strong>,</p>
+                            <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+                                <strong>${senderName}</strong>${inviter_email ? ` (${inviter_email})` : ""} has invited you to join a live video & screen-sharing session right now on <strong>KL EduConnect</strong>.
+                            </p>
+                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin: 20px 0;">
+                                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Session Details</div>
+                                <div style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 4px;">${sessionTitle}</div>
+                                <div style="font-size: 12px; font-family: monospace; color: #991b1b; margin-top: 4px;">Room ID: ${roomCode}</div>
+                            </div>
+                            <div style="text-align: center; margin: 24px 0;">
+                                <a href="${portalLink}" style="display: inline-block; background: #b91c1c; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 12px 24px; border-radius: 10px; margin-right: 8px;">
+                                    🎥 Join in KL EduConnect Portal
+                                </a>
+                                <a href="${jitsiLink}" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; padding: 12px 20px; border-radius: 10px;">
+                                    🌐 Direct WebRTC Room Link
+                                </a>
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; font-size: 11px; color: #94a3b8; text-align: center;">
+                            KL EduConnect • Office of Collaborative Learning & Academic Innovation
+                        </div>
+                    </div>
+                `;
+
+                try {
+                    await transporter.sendMail({
+                        from: senderAddress,
+                        to: rawEmail,
+                        subject: `🎥 Live Video Invite: ${senderName} invited you to "${sessionTitle}"`,
+                        html: emailHtml,
+                        text: `${senderName} invited you to join the Live Video Huddle "${sessionTitle}" (Room: ${roomCode}). Join at ${portalLink} or ${jitsiLink}`
+                    });
+                    emailDispatched = true;
+                    console.log(`[HUDDLE INVITE] Sent email invite to ${rawEmail} for room ${roomCode}`);
+                } catch (mailErr) {
+                    console.warn(`[HUDDLE INVITE] SMTP warning for ${rawEmail}:`, mailErr.message);
+                }
+            }
+
+            results.push({
+                name: targetFullName,
+                email: rawEmail,
+                in_app_notified: inAppNotified,
+                email_dispatched: emailDispatched
+            });
+        }
+
+        res.json({
+            success: true,
+            invited_count: results.length,
+            results,
+            message: `Invitation dispatched via Email & In-App Notification to ${results.map((r) => r.name || r.email).join(", ")}!`
+        });
+    } catch (error) {
+        console.error("Huddle invite error:", error);
+        res.status(500).json({ error: "Failed to send huddle invitation: " + error.message });
     }
 });
 

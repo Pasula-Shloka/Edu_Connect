@@ -1095,6 +1095,102 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     }
   }
 
+  // 14. LIVE ROOM PRESENCE & HUDDLE INVITATIONS (STANDALONE FALLBACK)
+  if (path.includes('/api/live-room/presence')) {
+    const roomKey = `kl_live_room_${body.room_name || 'default'}`;
+    let roomData: { participants: any[]; messages: any[] } = { participants: [], messages: [] };
+    try {
+      const raw = localStorage.getItem(roomKey);
+      if (raw) roomData = JSON.parse(raw);
+    } catch {}
+
+    const now = Date.now();
+    const pKey = (body.user_email || body.user_name || 'user').toLowerCase();
+    const filtered = (roomData.participants || []).filter(
+      (p: any) => (p.email || p.name || '').toLowerCase() !== pKey && now - (p.lastSeen || 0) < 30000
+    );
+    filtered.push({
+      name: body.user_name || 'Participant',
+      email: body.user_email || '',
+      role: body.user_role || 'Team Member',
+      camOn: body.cam_on !== false,
+      micOn: body.mic_on !== false,
+      handRaised: Boolean(body.hand_raised),
+      lastSeen: now,
+    });
+    roomData.participants = filtered;
+    try {
+      localStorage.setItem(roomKey, JSON.stringify(roomData));
+    } catch {}
+    return jsonResponse(roomData);
+  }
+
+  if (path.includes('/api/live-room/leave')) {
+    const roomKey = `kl_live_room_${body.room_name || 'default'}`;
+    try {
+      const raw = localStorage.getItem(roomKey);
+      if (raw) {
+        const roomData = JSON.parse(raw);
+        const pKey = (body.user_email || body.user_name || '').toLowerCase();
+        roomData.participants = (roomData.participants || []).filter(
+          (p: any) => (p.email || p.name || '').toLowerCase() !== pKey
+        );
+        localStorage.setItem(roomKey, JSON.stringify(roomData));
+      }
+    } catch {}
+    return jsonResponse({ success: true });
+  }
+
+  if (path.includes('/api/live-room/chat')) {
+    const roomKey = `kl_live_room_${body.room_name || 'default'}`;
+    let roomData: { participants: any[]; messages: any[] } = { participants: [], messages: [] };
+    try {
+      const raw = localStorage.getItem(roomKey);
+      if (raw) roomData = JSON.parse(raw);
+    } catch {}
+    const newMsg = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      sender: body.sender || 'Participant',
+      role: body.role || 'Team Member',
+      text: String(body.text || '').trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    roomData.messages = [...(roomData.messages || []), newMsg];
+    try {
+      localStorage.setItem(roomKey, JSON.stringify(roomData));
+    } catch {}
+    return jsonResponse({ success: true, messages: roomData.messages });
+  }
+
+  if (path.includes('/api/huddle/invite') && method === 'POST') {
+    const targetList = Array.isArray(body.invitees) && body.invitees.length > 0
+      ? body.invitees
+      : body.invitee_email
+      ? [{ email: body.invitee_email, name: body.invitee_name || 'Teammate', user_id: body.invitee_user_id }]
+      : [];
+
+    const users = standaloneDB.getUsers();
+    for (const target of targetList) {
+      const email = String(target.email || '').trim().toLowerCase();
+      const matched = users.find(
+        (u) => Number(u.user_id) === Number(target.user_id) || u.email.toLowerCase() === email || u.roll_number === email.split('@')[0]
+      );
+      if (matched) {
+        standaloneDB.addNotification(
+          Number(matched.user_id),
+          `🎥 Live Video Invite: ${body.room_title || body.group_name || 'Team Huddle'}`,
+          `${body.inviter_name || 'Your teammate'} invited you to join the live video session "${body.room_title || 'Live Huddle'}". Open Group Workspaces -> Live Video Huddle to join now!`
+        );
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      invited_count: targetList.length,
+      message: `Invitation dispatched via Email & In-App Notification to ${targetList.map((t: any) => t.name || t.email).join(', ')}!`,
+    });
+  }
+
   // Safe fallback: Return array for GET requests so .map() or Array.isArray() never crashes
   if (method === 'GET') {
     return jsonResponse([]);

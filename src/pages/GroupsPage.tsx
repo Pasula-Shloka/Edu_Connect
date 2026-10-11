@@ -1479,6 +1479,7 @@ export default function GroupsPage() {
                 peers={members
                   .filter((m) => m.user_id !== userId)
                   .map((m) => ({
+                    user_id: m.user_id,
                     name: m.full_name,
                     role: m.role || 'Team Member',
                     email: m.email,

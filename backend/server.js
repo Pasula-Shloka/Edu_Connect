@@ -210,9 +210,69 @@ app.post("/api/auth/signin", async (req, res) => {
         }
 
         if (!validPassword) {
+            try {
+                await pool.query(
+                    `INSERT INTO login_audit_logs (user_id, email, full_name, role, roll_number, section, ip_address, user_agent, login_status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'FAILED_PASSWORD')`,
+                    [
+                        user.user_id,
+                        user.email,
+                        user.full_name,
+                        user.role,
+                        user.roll_number || null,
+                        user.section || null,
+                        req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+                        req.headers['user-agent'] || 'Browser'
+                    ]
+                );
+            } catch (logErr) {}
             return res.status(401).json({
                 error: "Invalid email or password"
             });
+        }
+
+        // Record successful login timestamp & audit log in PostgreSQL
+        try {
+            await pool.query(
+                `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+                 ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0;
+                 CREATE TABLE IF NOT EXISTS login_audit_logs (
+                     log_id SERIAL PRIMARY KEY,
+                     user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+                     email VARCHAR(150),
+                     full_name VARCHAR(150),
+                     role VARCHAR(50),
+                     roll_number VARCHAR(50),
+                     section VARCHAR(20),
+                     ip_address VARCHAR(100),
+                     user_agent TEXT,
+                     login_status VARCHAR(50) DEFAULT 'SUCCESS',
+                     logged_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                 );`
+            );
+            await pool.query(
+                `UPDATE users 
+                 SET last_login_at = CURRENT_TIMESTAMP, 
+                     login_count = COALESCE(login_count, 0) + 1 
+                 WHERE user_id = $1`,
+                [user.user_id]
+            );
+            await pool.query(
+                `INSERT INTO login_audit_logs (user_id, email, full_name, role, roll_number, section, ip_address, user_agent, login_status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'SUCCESS')`,
+                [
+                    user.user_id,
+                    user.email,
+                    user.full_name,
+                    user.role,
+                    user.roll_number || null,
+                    user.section || null,
+                    req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+                    req.headers['user-agent'] || 'Browser'
+                ]
+            );
+        } catch (auditErr) {
+            console.warn("Login audit log notice:", auditErr.message);
         }
 
         const token = generateToken(user);
@@ -234,6 +294,7 @@ app.post("/api/auth/signin", async (req, res) => {
                 parent_email: user.parent_email,
                 parent_phone: user.parent_phone,
                 parent_pin: user.parent_pin,
+                last_login_at: new Date().toISOString(),
                 created_at: user.created_at
             }
         });

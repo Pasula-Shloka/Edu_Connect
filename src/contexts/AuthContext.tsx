@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { REAL_USERS_ROSTER } from '@/lib/realUsersRoster';
 
 type User = {
   id: string;
@@ -29,6 +30,32 @@ type Profile = {
   parent_pin?: string;
   created_at?: string;
 };
+
+function enrichProfileWithRoster(p: Profile): Profile {
+  const emailLower = (p.email || '').trim().toLowerCase();
+  const rollKey = (p.roll_number || emailLower.split('@')[0] || '').trim().toLowerCase();
+  const official = REAL_USERS_ROSTER.find(
+    (ru) =>
+      (ru.email && ru.email.toLowerCase() === emailLower) ||
+      (ru.roll_number && ru.roll_number.toLowerCase() === rollKey)
+  );
+  if (!official) return p;
+  return {
+    ...p,
+    id: String(official.user_id || p.id),
+    user_id: official.user_id || p.user_id,
+    full_name: official.full_name || p.full_name,
+    role: official.role || p.role,
+    department: official.department || p.department,
+    year: official.year || p.year,
+    section: official.section || p.section,
+    roll_number: official.roll_number || p.roll_number,
+    parent_name: official.parent_name || p.parent_name,
+    parent_email: p.parent_email || official.parent_email,
+    parent_pin: official.parent_pin || p.parent_pin,
+    parent_phone: official.parent_phone || p.parent_phone,
+  };
+}
 
 interface AuthContextValue {
   session: Session | null;
@@ -120,10 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
 
-      const userProfile: Profile = {
+      const userProfile = enrichProfileWithRoster({
         id: String(data.user_id),
         user_id: data.user_id,
-        email: data.email,
+        email: data.email || email,
         full_name: data.full_name,
         role: data.role,
         department: data.department,
@@ -135,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         parent_phone: data.parent_phone,
         parent_pin: data.parent_pin,
         created_at: data.created_at,
-      };
+      });
 
       setProfile(userProfile);
     } catch (error) {
@@ -225,13 +252,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
 
+      const immediateProfile = enrichProfileWithRoster({
+        id: String(data.user.user_id),
+        user_id: Number(data.user.user_id),
+        email: data.user.email,
+        full_name: data.user.full_name,
+        role: data.user.role,
+        department: data.user.department,
+        year: data.user.year,
+        section: data.user.section,
+        roll_number: data.user.roll_number,
+        parent_name: data.user.parent_name,
+        parent_email: data.user.parent_email,
+        parent_phone: data.user.parent_phone,
+        parent_pin: data.user.parent_pin,
+      });
+
       const newSession: Session = {
         user: {
-          id: String(data.user.user_id),
-          email: data.user.email,
+          id: String(immediateProfile.user_id || data.user.user_id),
+          email: immediateProfile.email,
           user_metadata: {
-            full_name: data.user.full_name,
-            role: data.user.role,
+            full_name: immediateProfile.full_name,
+            role: immediateProfile.role,
           },
         },
       };
@@ -242,15 +285,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       setSession(newSession);
-
-      const immediateProfile: Profile = {
-        id: String(data.user.user_id),
-        user_id: Number(data.user.user_id),
-        email: data.user.email,
-        full_name: data.user.full_name,
-        role: data.user.role,
-      };
-
       setProfile(immediateProfile);
 
       if (data.token) {
@@ -277,23 +311,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? 'faculty'
         : 'student';
 
-      const fallbackSession: Session = {
-        user: {
-          id: '1',
-          email: cleanEmail,
-          user_metadata: {
-            full_name: cleanEmail.split('@')[0],
-            role: detectedRole,
-          },
-        },
-      };
-
-      const fallbackProfile: Profile = {
+      const fallbackProfile = enrichProfileWithRoster({
         id: '1',
         user_id: 1,
         email: cleanEmail,
         full_name: cleanEmail.split('@')[0],
         role: detectedRole,
+      });
+
+      const fallbackSession: Session = {
+        user: {
+          id: fallbackProfile.id,
+          email: fallbackProfile.email,
+          user_metadata: {
+            full_name: fallbackProfile.full_name,
+            role: fallbackProfile.role,
+          },
+        },
       };
 
       const clientJwt = generateClientJwt(fallbackProfile);

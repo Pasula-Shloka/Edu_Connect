@@ -4,6 +4,8 @@
  * without requiring a local Node.js or PostgreSQL backend.
  */
 
+import { REAL_USERS_ROSTER } from './realUsersRoster';
+
 export interface StandaloneUser {
   id: string;
   user_id: number;
@@ -14,6 +16,10 @@ export interface StandaloneUser {
   year?: string;
   section?: string;
   roll_number?: string;
+  parent_name?: string;
+  parent_email?: string;
+  parent_pin?: string;
+  parent_phone?: string;
   status: string;
   created_at: string;
 }
@@ -37,12 +43,12 @@ export interface StandaloneExamAttempt {
   evaluations?: Record<string, { marks: number; feedback: string }>;
 }
 
-const INITIAL_USERS: StandaloneUser[] = [
+const LEGACY_USERS: StandaloneUser[] = [
   {
-    id: '1',
-    user_id: 1,
+    id: '1001',
+    user_id: 1001,
     email: '2200030001@klh.edu.in',
-    full_name: 'Shloka Reddy',
+    full_name: 'PASULA SHLOKA',
     role: 'student',
     department: 'Computer Science & Engineering',
     year: '3rd Year',
@@ -170,6 +176,13 @@ const INITIAL_USERS: StandaloneUser[] = [
     status: 'Active',
     created_at: '2026-09-05T08:00:00Z',
   },
+];
+
+const INITIAL_USERS: StandaloneUser[] = [
+  ...REAL_USERS_ROSTER,
+  ...LEGACY_USERS.filter(
+    (lu) => !REAL_USERS_ROSTER.some((ru) => ru.email.toLowerCase() === lu.email.toLowerCase())
+  ),
 ];
 
 const INITIAL_COURSES = [
@@ -1107,6 +1120,49 @@ function getOrInit<T>(key: string, initial: T): T {
           }
         }
         return merged as unknown as T;
+      }
+
+      // Sync & upgrade users from REAL_USERS_ROSTER so every roll number displays its true student name & section
+      if (key === 'users' && Array.isArray(parsed)) {
+        const rosterByKey = new Map<string, StandaloneUser>();
+        for (const ru of REAL_USERS_ROSTER) {
+          if (ru.email) rosterByKey.set(ru.email.toLowerCase(), ru);
+          if (ru.roll_number) rosterByKey.set(ru.roll_number.toLowerCase(), ru);
+        }
+
+        const syncedUsers: StandaloneUser[] = parsed.map((u: StandaloneUser) => {
+          const emailKey = (u.email || '').toLowerCase();
+          const rollKey = (u.roll_number || emailKey.split('@')[0] || '').toLowerCase();
+          const official = rosterByKey.get(emailKey) || rosterByKey.get(rollKey);
+          if (official) {
+            return {
+              ...u,
+              user_id: official.user_id,
+              id: String(official.user_id),
+              full_name: official.full_name,
+              section: official.section || u.section,
+              roll_number: official.roll_number || u.roll_number,
+              department: official.department || u.department,
+              year: official.year || u.year,
+              parent_name: official.parent_name || u.parent_name,
+              parent_email: u.parent_email || official.parent_email,
+              parent_pin: official.parent_pin || u.parent_pin,
+            };
+          }
+          return u;
+        });
+
+        const existingEmails = new Set(syncedUsers.map((u) => (u.email || '').toLowerCase()));
+        for (const ru of REAL_USERS_ROSTER) {
+          if (!existingEmails.has((ru.email || '').toLowerCase())) {
+            syncedUsers.push(ru);
+          }
+        }
+
+        try {
+          localStorage.setItem(`educonnect_v3_${key}`, JSON.stringify(syncedUsers));
+        } catch {}
+        return syncedUsers as unknown as T;
       }
 
       return parsed;

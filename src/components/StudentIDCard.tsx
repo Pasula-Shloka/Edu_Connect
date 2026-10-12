@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { Award, Flame, QrCode, ShieldCheck, Download, RefreshCw, Lock, ExternalLink, Sparkles, Edit3, Check } from 'lucide-react';
 import ParentSnapshotModal from './ParentSnapshotModal';
+import { REAL_USERS_ROSTER } from '@/lib/realUsersRoster';
 
 interface StudentIDCardProps {
   user: {
@@ -26,22 +27,35 @@ export default function StudentIDCard({ user }: StudentIDCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   const rollNumber = user?.roll_number || (user?.email ? user.email.split('@')[0] : '2510030025');
-  const fullName = user?.full_name || 'STUDENT';
-  const section = user?.section || 'A4';
-  const department = user?.department || 'Computer Science & Engineering';
-  const parentPin = user?.parent_pin || (user?.roll_number ? user.roll_number.slice(-6) : '849201');
-  const parentName = user?.parent_name || `Guardian of ${fullName}`;
+  const rosterMatch = REAL_USERS_ROSTER.find(
+    (r) =>
+      r.roll_number === rollNumber ||
+      (user?.email && r.email.toLowerCase() === user.email.toLowerCase())
+  );
 
-  const [parentEmail, setParentEmail] = useState(user?.parent_email || `parent.${rollNumber}@gmail.com`);
+  const isGenericName = !user?.full_name || /^student\s+\d+/i.test(user.full_name.trim());
+  const fullName = (!isGenericName ? user?.full_name : rosterMatch?.full_name) || rosterMatch?.full_name || user?.full_name || 'STUDENT';
+  const section =
+    (user?.section && user.section !== 'Section A' ? user.section : rosterMatch?.section) ||
+    rosterMatch?.section ||
+    user?.section ||
+    'A4';
+  const department = user?.department || rosterMatch?.department || 'Computer Science & Engineering';
+  const parentPin = user?.parent_pin || rosterMatch?.parent_pin || (rollNumber ? rollNumber.slice(-6) : '849201');
+  const parentName = user?.parent_name || rosterMatch?.parent_name || `Guardian of ${fullName}`;
+
+  const [parentEmail, setParentEmail] = useState(
+    user?.parent_email || rosterMatch?.parent_email || `parent.${rollNumber}@gmail.com`
+  );
   const [editingEmail, setEditingEmail] = useState(false);
-  const [emailDraft, setEmailDraft] = useState(user?.parent_email || '');
+  const [emailDraft, setEmailDraft] = useState(user?.parent_email || rosterMatch?.parent_email || '');
   const [savingEmail, setSavingEmail] = useState(false);
 
   useEffect(() => {
-    const initialEmail = user?.parent_email || `parent.${rollNumber}@gmail.com`;
+    const initialEmail = user?.parent_email || rosterMatch?.parent_email || `parent.${rollNumber}@gmail.com`;
     setParentEmail(initialEmail);
     setEmailDraft(initialEmail);
-  }, [user?.parent_email, rollNumber]);
+  }, [user?.parent_email, rosterMatch?.parent_email, rollNumber]);
 
   async function handleSaveParentEmail(e: React.MouseEvent) {
     e.stopPropagation();
@@ -374,7 +388,7 @@ export default function StudentIDCard({ user }: StudentIDCardProps) {
       {/* Parent Snapshot Modal */}
       {showParentModal && (
         <ParentSnapshotModal
-          pinOrRoll={parentPin || rollNumber}
+          pinOrRoll={rollNumber || parentPin}
           onClose={() => setShowParentModal(false)}
         />
       )}

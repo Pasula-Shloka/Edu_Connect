@@ -76,10 +76,13 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
   // 1. AUTHENTICATION & SESSIONS
   if (path.includes('/api/auth/signin') && method === 'POST') {
     const email = (body.email || '').trim().toLowerCase();
+    const rollCandidate = email.split('@')[0];
     const users = standaloneDB.getUsers();
 
-    // Match exact or alias
-    let matchedUser = users.find(u => u.email.toLowerCase() === email);
+    // Match exact email or roll_number
+    let matchedUser = users.find(
+      u => u.email.toLowerCase() === email || (u.roll_number && u.roll_number.toLowerCase() === rollCandidate)
+    );
 
     // Aliases for Administrator (strictly single admin user)
     if (!matchedUser && (email === 'admin@klh.edu.in' || email === 'admin@admin.edu.in')) {
@@ -87,7 +90,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     }
     // Aliases for legacy student logins
     if (!matchedUser && (email === 'shloka@klh.edu.in' || email === 'shloka@klh.edu')) {
-      matchedUser = users.find(u => u.roll_number === '2200030001');
+      matchedUser = users.find(u => u.roll_number === '2510030025' || u.roll_number === '2200030001');
     }
     if (!matchedUser && email === 'ananya@klh.edu.in') {
       matchedUser = users.find(u => u.roll_number === '2200030045');
@@ -104,8 +107,6 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
     }
 
     if (!matchedUser) {
-      // Auto-detect institutional role based on email identifier
-      // ADMIN: strictly ONLY admin@klh.edu.in or admin@admin.edu.in!
       const role: 'student' | 'faculty' | 'admin' =
         email === 'admin@klh.edu.in' || email === 'admin@admin.edu.in'
           ? 'admin'
@@ -114,7 +115,7 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
           : 'student';
 
       const rollMatch = email.match(/^(\d+)/);
-      const studentRoll = role === 'student' ? (rollMatch ? rollMatch[1] : `2200030${Math.floor(100 + Math.random() * 900)}`) : undefined;
+      const studentRoll = role === 'student' ? (rollMatch ? rollMatch[1] : `2510030${Math.floor(100 + Math.random() * 900)}`) : undefined;
       const formattedEmail = role === 'student' ? `${studentRoll}@klh.edu.in` : role === 'admin' ? 'admin@klh.edu.in' : email;
 
       const nameFromEmail = email.split('@')[0].replace(/[._]/g, ' ');
@@ -141,6 +142,10 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
         year: matchedUser.year,
         section: matchedUser.section,
         roll_number: matchedUser.roll_number,
+        parent_name: matchedUser.parent_name,
+        parent_email: matchedUser.parent_email,
+        parent_pin: matchedUser.parent_pin,
+        parent_phone: matchedUser.parent_phone,
       },
     });
   }
@@ -197,8 +202,12 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
 
   if (path.includes('/api/user-id')) {
     const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+    const rollCandidate = email.split('@')[0];
     const users = standaloneDB.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email) || users[0];
+    const user =
+      users.find(
+        u => u.email.toLowerCase() === email || (u.roll_number && u.roll_number.toLowerCase() === rollCandidate)
+      ) || users[0];
 
     return jsonResponse({
       user_id: user.user_id,
@@ -209,6 +218,10 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
       year: user.year,
       section: user.section,
       roll_number: user.roll_number,
+      parent_name: user.parent_name,
+      parent_email: user.parent_email,
+      parent_pin: user.parent_pin,
+      parent_phone: user.parent_phone,
       created_at: user.created_at,
     });
   }
@@ -930,25 +943,37 @@ function handleStandaloneRequest(urlStr: string, init?: RequestInit): Response {
 
     if (path.includes('/student/')) {
       const pinOrRoll = decodeURIComponent(path.split('/student/')[1] || '').trim();
+      const rollCandidate = pinOrRoll.split('@')[0];
       const users = standaloneDB.getUsers();
-      const student = users.find(u => u.parent_pin === pinOrRoll || u.roll_number === pinOrRoll || String(u.user_id) === pinOrRoll) || users.find(u => u.role === 'student');
+      const student =
+        users.find(
+          u =>
+            u.roll_number === pinOrRoll ||
+            u.roll_number === rollCandidate ||
+            u.parent_pin === pinOrRoll ||
+            u.email.toLowerCase() === pinOrRoll.toLowerCase() ||
+            (u.roll_number && u.roll_number.slice(-6) === pinOrRoll) ||
+            String(u.user_id) === pinOrRoll
+        ) || users.find(u => u.role === 'student');
       const sId = Number(student?.user_id || 1);
       const att = standaloneDB.getStudentAttendance(sId);
       const totalLectures = att.overall.total_lectures || 0;
       const attPercentage = totalLectures > 0 ? att.overall.percentage : 0;
       const isEligible = totalLectures === 0 ? true : attPercentage >= 75;
+      const resolvedRoll = student?.roll_number || rollCandidate || pinOrRoll;
+      const resolvedName = student?.full_name || `Student ${resolvedRoll}`;
 
       return jsonResponse({
         student: {
           user_id: sId,
-          full_name: student?.full_name || 'PASULA SHLOKA',
-          roll_number: student?.roll_number || '2510030025',
+          full_name: resolvedName,
+          roll_number: resolvedRoll,
           department: student?.department || 'Computer Science & Engineering',
           year: student?.year || '2nd Year',
-          section: student?.section || 'E4',
-          parent_name: student?.parent_name || 'P. Ramesh Reddy',
-          parent_email: student?.parent_email || 'rameshreddy.p@gmail.com',
-          parent_pin: student?.parent_pin || '849201',
+          section: student?.section || 'A4',
+          parent_name: student?.parent_name || `Guardian of ${resolvedName}`,
+          parent_email: student?.parent_email || `parent.${resolvedRoll}@gmail.com`,
+          parent_pin: student?.parent_pin || resolvedRoll.slice(-6),
         },
         academic_status: {
           attendance_percentage: attPercentage,

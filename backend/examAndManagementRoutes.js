@@ -1972,7 +1972,7 @@ router.get("/api/parent/student/:pinOrRoll", async (req, res) => {
                 user_id, full_name, email, roll_number, department, year, section,
                 parent_name, parent_phone, parent_email, parent_pin
              FROM users
-             WHERE (parent_pin = $1 OR roll_number = $1 OR email = $1 OR user_id::text = $1)
+             WHERE (roll_number = $1 OR parent_pin = $1 OR RIGHT(roll_number, 6) = $1 OR LOWER(email) = LOWER($1) OR user_id::text = $1)
                AND role = 'student'
              LIMIT 1`,
             [pinOrRoll]

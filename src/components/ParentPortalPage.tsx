@@ -733,7 +733,7 @@ export default function ParentPortalPage({ pin, onExit }: ParentPortalPageProps)
                 </div>
               </div>
               <a
-                href="mailto:mentor.cse@klh.edu.in?subject=Parent%20Academic%20Inquiry%20-%20Pasula%20Shloka%20(2510030025)"
+                href={`mailto:mentor.cse@klh.edu.in?subject=${encodeURIComponent(`Parent Academic Inquiry - ${student.full_name} (${student.roll_number})`)}`}
                 className="px-4 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
               >
                 <Mail className="w-3.5 h-3.5" />

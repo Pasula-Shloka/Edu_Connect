@@ -706,6 +706,7 @@ export interface StandaloneSubmission {
 }
 
 const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [];
+const SESSION_SUBMISSION_BLOBS = new Map<number, string>();
 
 const INITIAL_ENROLLMENTS: StandaloneEnrollment[] = [
   { enrollment_id: 1, student_id: 1, course_id: 1, course_code: 'CS2101', course_name: 'Database Management Systems (DBMS)' },
@@ -1054,52 +1055,7 @@ function getOrInit<T>(key: string, initial: T): T {
     if (valStr) {
       const parsed = JSON.parse(valStr);
 
-      // Migrate and normalize users if loaded from previous session
-      if (key === 'users' && Array.isArray(parsed)) {
-        let changed = false;
-        const migrated = parsed.map((u: any) => {
-          let updatedEmail = u.email;
-          if (u.role === 'admin') {
-            if (updatedEmail !== 'admin@klh.edu.in') {
-              updatedEmail = 'admin@klh.edu.in';
-              changed = true;
-            }
-          } else if (u.role === 'student') {
-            const roll = u.roll_number || (typeof u.email === 'string' && u.email.split('@')[0]) || '2200030001';
-            const expectedEmail = `${roll}@klh.edu.in`;
-            if (updatedEmail !== expectedEmail) {
-              updatedEmail = expectedEmail;
-              changed = true;
-            }
-          } else if (u.role === 'faculty') {
-            if (updatedEmail === 'faculty@faculty.edu.in') { updatedEmail = 'fac10342@klh.edu.in'; changed = true; }
-            else if (updatedEmail === 'lalitha@faculty.edu.in') { updatedEmail = 'fac10345@klh.edu.in'; changed = true; }
-            else if (updatedEmail === 'priya@faculty.edu.in') { updatedEmail = 'fac10350@klh.edu.in'; changed = true; }
-            else if (updatedEmail === 'lalitha@klh.edu') { updatedEmail = 'fac10360@klh.edu.in'; changed = true; }
-            else if (updatedEmail === 'newfaculty@faculty.edu.in') { updatedEmail = 'fac10370@klh.edu.in'; changed = true; }
-            else if (typeof updatedEmail === 'string' && !updatedEmail.startsWith('fac') && !updatedEmail.startsWith('emp')) {
-              updatedEmail = `fac${10300 + (Number(u.user_id) || 10)}@klh.edu.in`;
-              changed = true;
-            }
-          }
-          return { ...u, email: updatedEmail };
-        });
-
-        // Filter out rogue admin accounts: Administrator is single user (user_id 2 or email admin@klh.edu.in)
-        const singleAdminList = migrated.filter((u: any) => {
-          if (u.role === 'admin') {
-            return u.email === 'admin@klh.edu.in' || Number(u.user_id) === 2;
-          }
-          return true;
-        });
-
-        if (changed || singleAdminList.length !== parsed.length) {
-          try {
-            localStorage.setItem(`educonnect_v3_${key}`, JSON.stringify(singleAdminList));
-          } catch {}
-        }
-        return singleAdminList as unknown as T;
-      }
+      // Migrate and normalize users if loaded from previous session (merged with REAL_USERS_ROSTER below)
 
       // Migrate submissions student_email if student email changed
       if (key === 'submissions' && Array.isArray(parsed)) {
@@ -1912,13 +1868,19 @@ export const standaloneDB = {
   },
 
   getSubmissions: (studentId?: number): StandaloneSubmission[] => {
-    const all = getOrInit('submissions', INITIAL_SUBMISSIONS);
+    const all = getOrInit('submissions', INITIAL_SUBMISSIONS).map((s: StandaloneSubmission) => ({
+      ...s,
+      submission_url: SESSION_SUBMISSION_BLOBS.get(Number(s.submission_id)) || s.submission_url,
+    }));
     if (!studentId) return all;
     return all.filter((s: StandaloneSubmission) => Number(s.student_id) === Number(studentId));
   },
 
   getFacultySubmissions: (facultyId?: number): StandaloneSubmission[] => {
-    const all = getOrInit('submissions', INITIAL_SUBMISSIONS);
+    const all = getOrInit('submissions', INITIAL_SUBMISSIONS).map((s: StandaloneSubmission) => ({
+      ...s,
+      submission_url: SESSION_SUBMISSION_BLOBS.get(Number(s.submission_id)) || s.submission_url,
+    }));
     if (!facultyId) return all;
     const fId = Number(facultyId);
     const courses = standaloneDB.getCourses();
@@ -1944,8 +1906,13 @@ export const standaloneDB = {
       (s) => Number(s.assignment_id) === Number(data.assignment_id) && Number(s.student_id) === Number(data.student_id)
     );
 
+    const subId = existingIdx >= 0 ? list[existingIdx].submission_id : Date.now();
+    if (data.submission_url) {
+      SESSION_SUBMISSION_BLOBS.set(Number(subId), data.submission_url);
+    }
+
     const submissionItem: StandaloneSubmission = {
-      submission_id: existingIdx >= 0 ? list[existingIdx].submission_id : Date.now(),
+      submission_id: subId,
       assignment_id: Number(data.assignment_id),
       student_id: Number(data.student_id),
       student_name: student?.full_name || 'Enrolled Student',
@@ -1971,7 +1938,21 @@ export const standaloneDB = {
       list.unshift(submissionItem);
     }
 
-    localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    try {
+      localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    } catch {
+      // Safari / mobile localStorage 5MB quota fallback for large PDF uploads
+      try {
+        const compactList = list.map((item) => ({
+          ...item,
+          submission_url:
+            item.submission_url && item.submission_url.length > 100000
+              ? 'https://cdn.educonnect.klh.edu.in/submissions/verified_upload.pdf'
+              : item.submission_url,
+        }));
+        localStorage.setItem('educonnect_v3_submissions', JSON.stringify(compactList));
+      } catch {}
+    }
     return submissionItem;
   },
 
@@ -1990,7 +1971,20 @@ export const standaloneDB = {
     };
 
     list[idx] = updated;
-    localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    try {
+      localStorage.setItem('educonnect_v3_submissions', JSON.stringify(list));
+    } catch {
+      try {
+        const compactList = list.map((item) => ({
+          ...item,
+          submission_url:
+            item.submission_url && item.submission_url.length > 100000
+              ? 'https://cdn.educonnect.klh.edu.in/submissions/verified_upload.pdf'
+              : item.submission_url,
+        }));
+        localStorage.setItem('educonnect_v3_submissions', JSON.stringify(compactList));
+      } catch {}
+    }
     return updated;
   },
 

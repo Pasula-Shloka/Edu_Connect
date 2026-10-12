@@ -563,7 +563,10 @@ export default function AssignmentsPage() {
   async function submitAssignment(
     assignmentId: number
   ) {
-    if (!studentId) {
+    const effectiveStudentId =
+      studentId || Number(profile?.user_id || profile?.id || 0);
+
+    if (!effectiveStudentId) {
       alert(
         'Student account could not be identified'
       );
@@ -593,7 +596,7 @@ export default function AssignmentsPage() {
           },
           body: JSON.stringify({
             assignment_id: assignmentId,
-            student_id: studentId,
+            student_id: effectiveStudentId,
             submission_url: fileData,
           }),
         }
@@ -608,6 +611,13 @@ export default function AssignmentsPage() {
         );
       }
 
+      if (data?.submission) {
+        setSubmissions((prev) => ({
+          ...prev,
+          [assignmentId]: data.submission,
+        }));
+      }
+
       alert(
         'Assignment submitted successfully'
       );
@@ -617,7 +627,7 @@ export default function AssignmentsPage() {
         [assignmentId]: null,
       }));
 
-      await fetchStudentSubmissions(studentId);
+      await fetchStudentSubmissions(effectiveStudentId);
     } catch (error) {
       console.error(error);
 

@@ -45,7 +45,8 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
   const [activeTab, setActiveTab] = useState<'radar' | 'dispatch' | 'hallticket'>('radar');
 
   // Interactive Attendance Simulator ("What-If" Calculator)
-  const [simulatedNextClasses, setSimulatedNextClasses] = useState<number>(10);
+  const [simulatedNextClasses, setSimulatedNextClasses] = useState<number>(8);
+  const [simulatedMissedClasses, setSimulatedMissedClasses] = useState<number>(2);
 
   // Guardian Email & Report Dispatcher State
   const [guardianEmail, setGuardianEmail] = useState('');
@@ -190,10 +191,19 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
   const attendedClasses = Number(data?.academic_status?.attended_lectures ?? data?.academic_status?.attended_classes ?? 0);
   const currentAttPct = Number(data?.academic_status?.attendance_percentage ?? 0);
 
-  // What-If Attendance Projection
-  const projectedTotal = (totalClasses || 20) + simulatedNextClasses;
-  const projectedAttended = (totalClasses > 0 ? attendedClasses : 16) + simulatedNextClasses;
+  // What-If Attendance Projection (uses actual classes, or a 12-lecture baseline if <= 2 classes recorded so every slider notch changes %)
+  const baseTotal = totalClasses > 2 ? totalClasses : Math.max(totalClasses, 10);
+  const baseAttended =
+    totalClasses > 2
+      ? attendedClasses
+      : totalClasses > 0
+      ? Math.round((attendedClasses / totalClasses) * baseTotal)
+      : 9;
+  const projectedTotal = Math.max(1, baseTotal + simulatedNextClasses + simulatedMissedClasses);
+  const projectedAttended = Math.max(0, baseAttended + simulatedNextClasses);
   const projectedPct = Math.min(100, Math.round((projectedAttended / projectedTotal) * 1000) / 10);
+  const maxSafeLeaves = Math.max(0, Math.floor(projectedAttended / 0.75 - projectedTotal));
+  const classesNeededFor75 = projectedPct >= 75 ? 0 : Math.max(1, Math.ceil((0.75 * projectedTotal - projectedAttended) / 0.25));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in">
@@ -459,8 +469,8 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
                   </div>
 
                   {/* Interactive "What-If" Attendance Simulator */}
-                  <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 space-y-3">
-                    <div className="flex items-center justify-between">
+                  <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 space-y-3.5">
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <div className="p-2 rounded-xl bg-amber-500 text-slate-950">
                           <Calculator className="w-4 h-4" />
@@ -470,30 +480,76 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
                             Interactive Attendance Goal Predictor ("What-If" Simulator)
                           </h5>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Slide to simulate attending upcoming consecutive lectures:
+                            Drag either slider to simulate upcoming classes attended or planned leave:
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 block">Projected Attendance</span>
-                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                          {projectedPct}%
+                        <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400 block">
+                          Projected ({projectedAttended}/{projectedTotal} Classes)
+                        </span>
+                        <span
+                          className={`text-xl font-black ${
+                            projectedPct >= 75
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}
+                        >
+                          {projectedPct.toFixed(1)}%
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    {/* Slider 1: Upcoming Classes Attended */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        <span>Upcoming Consecutive Lectures Attended:</span>
+                        <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 font-mono font-bold">
+                          +{simulatedNextClasses} Attended
+                        </span>
+                      </div>
                       <input
                         type="range"
-                        min={1}
+                        min={0}
                         max={30}
                         value={simulatedNextClasses}
                         onChange={(e) => setSimulatedNextClasses(Number(e.target.value))}
-                        className="flex-1 accent-amber-500 cursor-pointer"
+                        className="w-full accent-emerald-600 cursor-pointer"
                       />
-                      <span className="px-3 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs font-mono font-bold">
-                        +{simulatedNextClasses} Lectures
+                    </div>
+
+                    {/* Slider 2: Planned Leave / Classes Missed */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        <span>Planned Leave / Lectures Missed:</span>
+                        <span className="px-2.5 py-0.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-800 dark:text-rose-300 font-mono font-bold">
+                          -{simulatedMissedClasses} Missed
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={20}
+                        value={simulatedMissedClasses}
+                        onChange={(e) => setSimulatedMissedClasses(Number(e.target.value))}
+                        className="w-full accent-rose-600 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Live UGC 75% Eligibility Verdict */}
+                    <div
+                      className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between ${
+                        projectedPct >= 75
+                          ? 'bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : 'bg-red-100/80 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
+                      }`}
+                    >
+                      <span>
+                        {projectedPct >= 75
+                          ? `✅ UGC Safe (≥75%) • Can safely take ${maxSafeLeaves} more class leave${maxSafeLeaves === 1 ? '' : 's'}`
+                          : `⚠️ Shortage Alert (<75%) • Need +${classesNeededFor75} consecutive attended classes to recover`}
                       </span>
+                      <span className="font-mono">{projectedPct.toFixed(1)}% / 75.0%</span>
                     </div>
                   </div>
 

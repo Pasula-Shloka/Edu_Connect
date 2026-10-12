@@ -1588,13 +1588,47 @@ router.post("/api/attendance", async (req, res) => {
             return res.status(400).json({ error: "Course ID, Date and records array are required" });
         }
 
+        await pool.query(`
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS roll_number VARCHAR(50);
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS student_name VARCHAR(150);
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS section VARCHAR(20);
+            ALTER TABLE attendance ADD COLUMN IF NOT EXISTS course_name VARCHAR(150);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS attendance_status VARCHAR(30) DEFAULT 'Present';
+        `);
+
+        const courseRes = await pool.query(
+            `SELECT course_code, course_name FROM courses WHERE course_id = $1 LIMIT 1`,
+            [Number(course_id)]
+        );
+        const courseLabel = courseRes.rows[0]
+            ? `${courseRes.rows[0].course_code} - ${courseRes.rows[0].course_name}`
+            : `Course #${course_id}`;
+
         for (const r of records) {
+            const finalStatus = r.status || 'Present';
             await pool.query(
-                `INSERT INTO attendance (course_id, student_id, date, status, marked_by)
-                 VALUES ($1, $2, $3::date, $4, $5)
+                `INSERT INTO attendance (
+                    course_id, student_id, roll_number, student_name, section, course_name, date, status, marked_by, created_at
+                 )
+                 SELECT 
+                    $1, u.user_id, u.roll_number, u.full_name, u.section, $6, $3::date, $4, $5, CURRENT_TIMESTAMP
+                 FROM users u
+                 WHERE u.user_id = $2
                  ON CONFLICT (course_id, student_id, date)
-                 DO UPDATE SET status = EXCLUDED.status, marked_by = EXCLUDED.marked_by`,
-                [Number(course_id), Number(r.student_id), date, r.status || 'Present', marked_by ? Number(marked_by) : null]
+                 DO UPDATE SET 
+                    status = EXCLUDED.status,
+                    roll_number = EXCLUDED.roll_number,
+                    student_name = EXCLUDED.student_name,
+                    section = EXCLUDED.section,
+                    course_name = EXCLUDED.course_name,
+                    marked_by = EXCLUDED.marked_by,
+                    created_at = CURRENT_TIMESTAMP`,
+                [Number(course_id), Number(r.student_id), date, finalStatus, marked_by ? Number(marked_by) : null, courseLabel]
+            );
+
+            await pool.query(
+                `UPDATE users SET attendance_status = $1 WHERE user_id = $2`,
+                [finalStatus, Number(r.student_id)]
             );
         }
 

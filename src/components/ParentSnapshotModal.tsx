@@ -352,7 +352,7 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
                         Live Campus Schedule Radar • Section {sectionCode}
                       </span>
                       <span className="text-[11px] font-mono text-slate-400">
-                        {liveSchedule.dayName} • KLH Aziz Nagar
+                        {liveSchedule.day} • KLH Aziz Nagar
                       </span>
                     </div>
 
@@ -370,7 +370,7 @@ export default function ParentSnapshotModal({ pinOrRoll, onClose }: ParentSnapsh
                               Faculty: {liveSchedule.currentClass.faculty}
                             </p>
                             <p className="text-[11px] text-amber-300 font-mono mt-1">
-                              Period {liveSchedule.currentSlot?.period} • {liveSchedule.currentSlot?.displayTime}
+                              {liveSchedule.currentSlot?.label} • {liveSchedule.currentSlot?.displayTime}
                             </p>
                           </div>
                         ) : (

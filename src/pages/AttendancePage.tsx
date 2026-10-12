@@ -24,6 +24,7 @@ import {
   CheckSquare,
   Sparkles,
   Mail,
+  X,
 } from 'lucide-react';
 
 type Course = {
@@ -312,7 +313,7 @@ export default function AttendancePage() {
 
   const absentees = students.filter((s) => s.status === 'Absent');
 
-  async function handleBulkAlertParents(channel: 'WhatsApp' | 'SMS' = 'WhatsApp') {
+  async function handleBulkAlertParents(channel: 'WhatsApp' | 'SMS' | 'Portal' | 'Email' = 'WhatsApp') {
     if (absentees.length === 0) return;
     try {
       setBulkAlertDispatching(true);

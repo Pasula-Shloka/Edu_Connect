@@ -676,6 +676,37 @@ export interface StandaloneAttendanceRecord {
 
 const INITIAL_ATTENDANCE_RECORDS: StandaloneAttendanceRecord[] = [];
 
+export interface StandaloneEnrollment {
+  enrollment_id: number;
+  student_id: number;
+  course_id: number;
+  course_code: string;
+  course_name: string;
+}
+
+export interface StandaloneSubmission {
+  submission_id: number;
+  assignment_id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  submission_url: string;
+  submitted_at: string;
+  marks: number | null;
+  feedback: string | null;
+  assignment_title: string;
+  title?: string;
+  unit_name?: string;
+  max_marks: number;
+  course_id: number;
+  course_code: string;
+  course_name: string;
+  faculty_id: number;
+  status: 'submitted' | 'graded' | 'pending';
+}
+
+const INITIAL_SUBMISSIONS: StandaloneSubmission[] = [];
+
 const INITIAL_ENROLLMENTS: StandaloneEnrollment[] = [
   { enrollment_id: 1, student_id: 1, course_id: 1, course_code: 'CS2101', course_name: 'Database Management Systems (DBMS)' },
   { enrollment_id: 2, student_id: 1, course_id: 2, course_code: 'CS2102', course_name: 'Data Structures and Algorithms 3 (DSA 3)' },
@@ -2164,6 +2195,23 @@ print("ACID Transaction Isolation & Normalization Checker Ready.")
     const all = getOrInit('notifications', INITIAL_NOTIFICATIONS);
     if (!userId) return all;
     return all.filter((n: any) => !n.user_id || Number(n.user_id) === Number(userId));
+  },
+
+  addNotification: (userId: number, title: string, message: string, type = 'announcement') => {
+    const list = standaloneDB.getNotifications();
+    const newItem: any = {
+      notification_id: Date.now(),
+      user_id: Number(userId),
+      title,
+      message,
+      type,
+      is_read: false,
+      read: false,
+      created_at: new Date().toISOString(),
+    };
+    list.unshift(newItem);
+    localStorage.setItem('educonnect_v3_notifications', JSON.stringify(list));
+    return newItem;
   },
 
   markNotificationRead: (id: number) => {
